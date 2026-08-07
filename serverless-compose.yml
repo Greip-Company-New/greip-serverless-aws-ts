@@ -1,0 +1,5 @@
+services:
+  service-catalogs:
+    path: services/service-catalogs
+  service-canales:
+    path: services/service-canales

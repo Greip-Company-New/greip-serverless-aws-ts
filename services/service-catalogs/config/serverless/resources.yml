@@ -1,0 +1,3 @@
+# Recursos extra de CloudFormation del servicio.
+# Por ahora vacio: GREIP aun no usa WAF ni recursos propios en este servicio.
+{}

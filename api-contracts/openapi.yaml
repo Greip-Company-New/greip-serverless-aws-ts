@@ -1,0 +1,1662 @@
+openapi: 3.0.3
+info:
+  title: GREIP COMPANY - API Contract
+  description: |
+    Contrato de las APIs REST de GREIP COMPANY (Perú).
+
+    - `service-security`: autenticación, usuarios + RBAC y auditoría.
+    - `service-catalogs`: catálogo de productos.
+
+    **Autenticación:**
+    - Todos los endpoints requieren la API Key por header `x-api-key` (usage plan de API Gateway).
+    - Los endpoints de `service-security` (salvo login/MFA/refresh/recuperación) requieren además
+      `Authorization: Bearer <accessToken>` (JWT RS256) y permisos RBAC.
+
+    **Envoltorio de respuestas:**
+    - En **éxito** (200/201) el body es el objeto `Response` directamente:
+      `{ success, message, data, statusCode, timestamp, path?, requestId?, metadata? }`.
+    - En **error** (4xx/5xx) el body es `{ "payload": { success:false, message, error, statusCode, timestamp } }`
+      (template `response.vm` de API Gateway). El `data` de cada endpoint se tipa en las secciones
+      `responses` de cada operación.
+    - Las respuestas paginadas incluyen `metadata.pagination`.
+  version: 1.0.0
+  contact:
+    name: GREIP COMPANY
+    url: https://greip.com.pe
+servers:
+  - url: https://apidev.greip.com.pe/srv-security
+    description: DEV - service-security (us-east-2)
+  - url: https://apidev.greip.com.pe/srv-catalogs
+    description: DEV - service-catalogs (us-east-2)
+tags:
+  - name: Auth
+    description: Autenticación y gestión de contraseñas (service-security)
+  - name: User
+    description: Usuarios y RBAC (service-security)
+  - name: Audit
+    description: Consulta de auditoría (service-security)
+  - name: Product
+    description: Catálogo de productos (service-catalogs)
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  # =========================================================
+  # AUTH (service-security)
+  # =========================================================
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión (email o documento + password)
+      operationId: authLogin
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Correo electrónico del usuario. Alternativa a documento.
+                  example: admin@greip.com.pe
+                documentType:
+                  type: string
+                  description: Tipo de documento (si se autentica por documento).
+                  enum: [D, R, C]
+                  example: D
+                documentNumber:
+                  type: string
+                  description: Número del documento (si se autentica por documento).
+                  example: "12345678"
+                password:
+                  type: string
+                  description: Contraseña del usuario.
+                  example: Greip#2026
+                channel:
+                  type: string
+                  description: Canal MFA preferido si el usuario requiere segundo factor.
+                  enum: [TOTP, SMS, EMAIL]
+                  example: TOTP
+              oneOf:
+                - required: [email]
+                - required: [documentType, documentNumber]
+      responses:
+        "200":
+          description: |
+            Login OK.
+            - Si el usuario NO tiene MFA activo: `data` es `TokenResponse` (tokens + perfil).
+            - Si el usuario tiene MFA activo: `data` es `MfaChallenge` (desafío pendiente).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/mfa/verify:
+    post:
+      tags: [Auth]
+      summary: Verificar código MFA y completar el login
+      operationId: authVerifyMfa
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mfaToken, challengeId, code]
+              properties:
+                mfaToken:
+                  type: string
+                  description: Token MFA obtenido en /auth/login (campo mfaToken).
+                  example: eyJ...
+                challengeId:
+                  type: string
+                  format: uuid
+                  description: Identificador del desafío MFA.
+                code:
+                  type: string
+                  pattern: "^\\d{6}$"
+                  description: Código OTP de 6 dígitos.
+                  example: "123456"
+      responses:
+        "200":
+          description: MFA verificado, se emiten los tokens (`data` es `TokenResponse`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Renovar el par de tokens con el refresh token
+      operationId: authRefreshToken
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  description: Refresh token emitido en login/refresh.
+                  example: eyJ...
+      responses:
+        "200":
+          description: Nuevo par de tokens (`data` es `TokenResponse`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: "Cerrar sesión (opcional: revocar todas las sesiones)"
+      operationId: authLogout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  description: Refresh token de la sesión a cerrar.
+                logoutAll:
+                  type: boolean
+                  description: Si true, cierra todas las sesiones del usuario.
+                  default: false
+                  example: false
+      responses:
+        "200":
+          description: 'Sesión cerrada (`data: { logout: true }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/password/change:
+    post:
+      tags: [Auth]
+      summary: Cambiar contraseña (requiere sesión activa)
+      operationId: authChangePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  description: Contraseña actual del usuario.
+                  example: Greip#2026
+                newPassword:
+                  type: string
+                  minLength: 8
+                  description: Nueva contraseña (mínimo 8 caracteres, según política).
+                  example: Nueva#Pass2026
+      responses:
+        "200":
+          description: 'Contraseña actualizada (`data: { passwordUpdated: true }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasswordChangedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/password/recovery:
+    post:
+      tags: [Auth]
+      summary: Solicitar recuperación de contraseña (envía enlace por email)
+      operationId: authRequestRecovery
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Correo al que se enviará el enlace de recuperación.
+                  example: admin@greip.com.pe
+      responses:
+        "200":
+          description: 'Siempre responde `data: { sent: true }` (no revela si el email existe).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecoveryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      summary: Reestablecer contraseña con el token de recuperación
+      operationId: authResetPassword
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resetToken, newPassword]
+              properties:
+                resetToken:
+                  type: string
+                  description: Token de recuperación enviado por email.
+                  example: eyJ...
+                newPassword:
+                  type: string
+                  minLength: 8
+                  description: Nueva contraseña (mínimo 8 caracteres, según política).
+                  example: Nueva#Pass2026
+      responses:
+        "200":
+          description: 'Contraseña reestablecida (`data: { passwordUpdated: true }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasswordChangedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # =========================================================
+  # USER + RBAC (service-security)
+  # =========================================================
+  /user:
+    post:
+      tags: [User]
+      summary: Crear usuario (perfil en DynamoDB + persona en PostgreSQL)
+      operationId: userCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: |
+            Usuario creado. `data` incluye el perfil (`user`), la persona maestra (`person`)
+            y, si no se envió `password`, la contraseña temporal generada (`generatedPassword`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateUserResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    get:
+      tags: [User]
+      summary: Listar usuarios (paginado y filtros)
+      operationId: userList
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [A, I]
+          description: Filtro por estado (A=activo, I=inactivo)
+        - name: email
+          in: query
+          schema:
+            type: string
+          description: Filtro por email (búsqueda parcial)
+        - name: document
+          in: query
+          schema:
+            type: string
+          description: Filtro por documento (búsqueda parcial)
+      responses:
+        "200":
+          description: |
+            Lista paginada de usuarios. `data` es un array de `User` y
+            `metadata.pagination` contiene la paginación.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /user/{userId}:
+    get:
+      tags: [User]
+      summary: Obtener usuario con persona, roles y permisos
+      operationId: userGet
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: |
+            Detalle del usuario. `data` combina el perfil (`user`), la persona (`person`),
+            los roles asignados (`roles`) y los permisos efectivos (`permissions`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [User]
+      summary: Actualizar datos del usuario
+      operationId: userUpdate
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Usuario actualizado (`data` es el perfil `User` resultante).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserUpdatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [User]
+      summary: Eliminar usuario (borrado lógico, status=I)
+      operationId: userDelete
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: 'Usuario eliminado (borrado lógico, `data: null`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /user/{userId}/roles:
+    post:
+      tags: [User]
+      summary: Asignar roles a un usuario
+      operationId: userAssignRoles
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  description: Lista de ids de roles a asignar.
+                  items:
+                    type: string
+                    description: Id del rol.
+                  example: ["1"]
+      responses:
+        "200":
+          description: 'Roles asignados (`data: { assigned: [roleId,...] }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignRolesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /user/{userId}/roles/{roleId}:
+    delete:
+      tags: [User]
+      summary: Quitar un rol de un usuario
+      operationId: userRemoveRole
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/RoleId"
+      responses:
+        "200":
+          description: 'Rol quitado (`data: { removed: true }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemovedRoleResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /user/{userId}/permissions:
+    get:
+      tags: [User]
+      summary: Obtener permisos efectivos de un usuario
+      operationId: userGetPermissions
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: 'Permisos del usuario (`data: { userId, permissions: [code,...] }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPermissionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /role:
+    get:
+      tags: [User]
+      summary: Listar roles
+      operationId: roleList
+      responses:
+        "200":
+          description: Lista de roles (`data` es un array de `Role`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [User]
+      summary: Crear rol
+      operationId: roleCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code:
+                  type: string
+                  description: Código único del rol (ej. ADMIN).
+                  example: ADMIN
+                name:
+                  type: string
+                  description: Nombre descriptivo del rol.
+                  example: Administrador
+                description:
+                  type: string
+                  description: Descripción del rol (opcional).
+                  example: Rol administrador con todos los permisos
+      responses:
+        "201":
+          description: Rol creado (`data` es el `Role` creado).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /permission:
+    get:
+      tags: [User]
+      summary: Listar permisos disponibles
+      operationId: permissionList
+      responses:
+        "200":
+          description: Lista de permisos (`data` es un array de `Permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # =========================================================
+  # AUDIT (service-security)
+  # =========================================================
+  /audit:
+    get:
+      tags: [Audit]
+      summary: Listar eventos de auditoría (paginado y filtros)
+      operationId: auditList
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Fecha inicial (ISO 8601)
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Fecha final (ISO 8601)
+        - name: action
+          in: query
+          schema:
+            type: string
+            example: USER_CREATED
+          description: Filtro por acción (USER_LOGIN, USER_CREATED, ...)
+        - name: entity
+          in: query
+          schema:
+            type: string
+            enum: [USER, SESSION, ROLE, MFA, AUDIT]
+          description: Filtro por entidad
+        - name: actor
+          in: query
+          schema:
+            type: string
+          description: Filtro por actor (email o userId)
+      responses:
+        "200":
+          description: |
+            Lista paginada de eventos de auditoría. `data` es un array de `AuditEvent`
+            y `metadata.pagination` contiene la paginación.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /audit/{sk}:
+    get:
+      tags: [Audit]
+      summary: Obtener un evento de auditoría por su sort key
+      operationId: auditGet
+      parameters:
+        - name: sk
+          in: path
+          required: true
+          schema:
+            type: string
+            example: EVENT#2026-08-07T12:00:00.000Z#abc123
+          description: Sort key del evento (formato EVENT#<fechaISO>#<eventId>)
+      responses:
+        "200":
+          description: Evento de auditoría (`data` es un `AuditEvent`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditGetResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # =========================================================
+  # PRODUCT (service-catalogs)
+  # =========================================================
+  /product:
+    get:
+      tags: [Product]
+      summary: Listar productos (paginado y filtros)
+      operationId: productList
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [A, I]
+          description: Filtro por estado
+        - name: name
+          in: query
+          schema:
+            type: string
+          description: Filtro por nombre (ILIKE parcial)
+      responses:
+        "200":
+          description: |
+            Lista paginada de productos. `data` es un array de `Product` y
+            `metadata.pagination` contiene la paginación.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    post:
+      tags: [Product]
+      summary: Crear producto
+      operationId: productCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductRequest"
+      responses:
+        "201":
+          description: Producto creado (`data` es el `Product` creado).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /product/{productId}:
+    get:
+      tags: [Product]
+      summary: Obtener producto por id
+      operationId: productGet
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      responses:
+        "200":
+          description: Producto encontrado (`data` es el `Product`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Product]
+      summary: Actualizar producto
+      operationId: productUpdate
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductRequest"
+      responses:
+        "200":
+          description: Producto actualizado (`data` es el `Product` resultante).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Product]
+      summary: Eliminar producto
+      operationId: productDelete
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      responses:
+        "200":
+          description: 'Producto eliminado (`data: null`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API Key del usage plan de API Gateway (private:true).
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token JWT RS256 emitido por /auth/login.
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Número de página a consultar (1-based).
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+      description: Tamaño de página (máx 100).
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: UUID del usuario (DynamoDB).
+    RoleId:
+      name: roleId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Id del rol a operar.
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+      description: Id del producto.
+
+  responses:
+    BadRequest:
+      description: 'Solicitud incorrecta (validación de payload). Body `{ payload: {...} }` con success=false y statusCode=400.'
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Unauthorized:
+      description: 'API Key inválida o token ausente/expirado. Body `{ payload: {...} }` con success=false y statusCode=401.'
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Forbidden:
+      description: 'No tiene permisos RBAC para la operación. Body `{ payload: {...} }` con success=false y statusCode=403.'
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    NotFound:
+      description: 'Recurso no encontrado. Body `{ payload: {...} }` con success=false y statusCode=404.'
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    InternalError:
+      description: 'Error interno del servidor. Body `{ payload: {...} }` con success=false y statusCode=500.'
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+  schemas:
+    # ===================== Envoltorios =====================
+    ApiEnvelope:
+      type: object
+      description: |
+        Envoltorio estándar de respuestas exitosas. La Lambda devuelve el objeto
+        `Response` directamente como body HTTP (sin envolver en `payload`).
+        El campo `data` varía según el endpoint (ver esquemas específicos).
+      required: [success, message, statusCode, timestamp]
+      properties:
+        success:
+          type: boolean
+          description: Indicador de éxito de la operación (true = OK).
+          example: true
+        message:
+          type: string
+          description: Mensaje legible del resultado de la operación.
+          example: Success
+        statusCode:
+          type: integer
+          description: Código HTTP de la respuesta.
+          example: 200
+        timestamp:
+          type: string
+          format: date-time
+          description: Fecha/hora de la respuesta (zona America/Santo_Domingo, ISO 8601).
+        data:
+          type: object
+          nullable: true
+          description: Datos específicos del endpoint (null en operaciones sin retorno).
+        error:
+          type: object
+          nullable: true
+          description: Detalle del error (presente solo en respuestas de error).
+        path:
+          type: string
+          nullable: true
+          description: Ruta del endpoint que originó la respuesta (opcional).
+        requestId:
+          type: string
+          nullable: true
+          description: Identificador de trazabilidad (awsRequestId).
+        metadata:
+          type: object
+          description: Metadatos de la respuesta (p.ej. paginación).
+          properties:
+            pagination:
+              $ref: "#/components/schemas/Pagination"
+
+    ErrorEnvelope:
+      type: object
+      description: |
+        Envoltorio de respuestas de error (4xx/5xx). API Gateway envuelve el error
+        lanzado por la Lambda como `{ "payload": {...} }` (template response.vm).
+      required: [payload]
+      properties:
+        payload:
+          type: object
+          required: [success, message, statusCode, timestamp]
+          properties:
+            success:
+              type: boolean
+              description: Siempre false en respuestas de error.
+              example: false
+            message:
+              type: string
+              description: Mensaje descriptivo del error.
+              example: Credenciales invalidas
+            statusCode:
+              type: integer
+              description: Código HTTP del error.
+              example: 401
+            timestamp:
+              type: string
+              format: date-time
+              description: Fecha/hora del error (ISO 8601).
+            error:
+              type: object
+              nullable: true
+              description: Detalle del error (objeto con name/message/stack o de validación).
+            path:
+              type: string
+              nullable: true
+            requestId:
+              type: string
+              nullable: true
+            metadata:
+              type: object
+              nullable: true
+
+    Pagination:
+      type: object
+      description: Metadatos de paginación (respuestas con listas).
+      required: [page, limit, total, totalPages, hasNextPage, hasPrevPage]
+      properties:
+        page:
+          type: integer
+          description: Número de página actual (1-based).
+          example: 1
+        limit:
+          type: integer
+          description: Tamaño de página solicitado.
+          example: 10
+        total:
+          type: integer
+          description: Total de registros que coinciden con la búsqueda.
+          example: 42
+        totalPages:
+          type: integer
+          description: Total de páginas disponibles.
+          example: 5
+        hasNextPage:
+          type: boolean
+          description: Indica si existe una página siguiente.
+          example: true
+        hasPrevPage:
+          type: boolean
+          description: Indica si existe una página anterior.
+          example: false
+
+    # ===================== AUTH =====================
+    LoginResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              oneOf:
+                - $ref: "#/components/schemas/TokenResponse"
+                - $ref: "#/components/schemas/MfaChallenge"
+              description: |
+                `TokenResponse` si el usuario no tiene MFA; `MfaChallenge` si requiere
+                verificación de segundo factor.
+
+    TokenResponseEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/TokenResponse"
+
+    TokenResponse:
+      type: object
+      description: Resultado de login/verifyMfa/refresh con el par de tokens y el perfil.
+      required: [accessToken, refreshToken, expiresAt, user]
+      properties:
+        accessToken:
+          type: string
+          description: 'JWT de acceso (RS256). Enviar como `Authorization: Bearer <token>`.'
+        refreshToken:
+          type: string
+          description: Refresh token (rotativo, usado en /auth/refresh).
+        expiresAt:
+          type: integer
+          description: Epoch ms de expiración del access token.
+        user:
+          $ref: "#/components/schemas/User"
+          description: Perfil público del usuario autenticado.
+
+    MfaChallenge:
+      type: object
+      description: Desafío MFA pendiente tras el login.
+      required: [requiresMfa, channel, mfaToken, expiresAt]
+      properties:
+        requiresMfa:
+          type: boolean
+          description: true si el usuario debe completar un segundo factor.
+          example: true
+        channel:
+          type: string
+          description: Canal MFA solicitado.
+          enum: [TOTP, SMS, EMAIL]
+        challengeId:
+          type: string
+          format: uuid
+          description: Identificador del desafío MFA creado (usar en /auth/mfa/verify).
+        maskedDestination:
+          type: string
+          description: Destino enmascarado del canal (ej. "51****7777").
+          example: "51****7777"
+        mfaToken:
+          type: string
+          description: Token MFA a usar en /auth/mfa/verify.
+        expiresAt:
+          type: integer
+          description: Epoch ms de expiración del mfaToken.
+
+    LogoutResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [logout]
+              properties:
+                logout:
+                  type: boolean
+                  description: true cuando la sesión fue cerrada.
+                  example: true
+
+    PasswordChangedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [passwordUpdated]
+              properties:
+                passwordUpdated:
+                  type: boolean
+                  description: true cuando la contraseña fue actualizada.
+                  example: true
+
+    RecoveryResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [sent]
+              properties:
+                sent:
+                  type: boolean
+                  description: Siempre true (respuesta genérica de seguridad).
+                  example: true
+              description: Respuesta genérica para no revelar si el email existe.
+
+    # ===================== USER / RBAC =====================
+    CreateUserResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [user, person]
+              properties:
+                user:
+                  $ref: "#/components/schemas/User"
+                  description: Perfil público del usuario creado.
+                person:
+                  $ref: "#/components/schemas/Person"
+                  description: Persona maestra creada en PostgreSQL.
+                generatedPassword:
+                  type: string
+                  nullable: true
+                  description: Contraseña temporal generada si no se envió `password`.
+
+    UserListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/User"
+            metadata:
+              type: object
+              properties:
+                pagination:
+                  $ref: "#/components/schemas/Pagination"
+
+    UserDetailResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [user, person, roles, permissions]
+              properties:
+                user:
+                  $ref: "#/components/schemas/User"
+                  description: Perfil público del usuario.
+                person:
+                  $ref: "#/components/schemas/Person"
+                  description: Datos maestros de la persona.
+                roles:
+                  type: array
+                  description: Roles asignados al usuario.
+                  items:
+                    $ref: "#/components/schemas/Role"
+                permissions:
+                  type: array
+                  description: Códigos de permisos efectivos.
+                  items:
+                    type: string
+                    example: user.create
+
+    UserUpdatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/User"
+
+    DeletedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              nullable: true
+              example: null
+
+    AssignRolesResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [assigned]
+              properties:
+                assigned:
+                  type: array
+                  description: Ids de los roles asignados.
+                  items:
+                    type: string
+                  example: ["1"]
+
+    RemovedRoleResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [removed]
+              properties:
+                removed:
+                  type: boolean
+                  description: true cuando el rol fue quitado del usuario.
+                  example: true
+
+    UserPermissionsResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [userId, permissions]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                  description: UUID del usuario (DynamoDB).
+                permissions:
+                  type: array
+                  description: Códigos de permisos efectivos del usuario.
+                  items:
+                    type: string
+                    example: role.manage
+
+    RoleListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Role"
+
+    RoleCreatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Role"
+
+    PermissionListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Permission"
+
+    # ===================== AUDIT =====================
+    AuditListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/AuditEvent"
+            metadata:
+              type: object
+              properties:
+                pagination:
+                  $ref: "#/components/schemas/Pagination"
+
+    AuditGetResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/AuditEvent"
+
+    # ===================== PRODUCT =====================
+    ProductListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Product"
+            metadata:
+              type: object
+              properties:
+                pagination:
+                  $ref: "#/components/schemas/Pagination"
+
+    ProductResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Product"
+
+    # ===================== Entidades =====================
+    User:
+      type: object
+      description: Perfil público del usuario (DynamoDB, camelCase).
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Identificador único del usuario (UUID).
+        tenant:
+          type: string
+          description: Código del tenant (empresa) al que pertenece.
+          example: GREIP
+        email:
+          type: string
+          format: email
+          description: Correo electrónico de acceso (único por tenant).
+        documentType:
+          type: string
+          description: Tipo de documento de identidad.
+          enum: [D, R, C]
+        documentNumber:
+          type: string
+          description: Número del documento de identidad (único por tenant).
+        firstName:
+          type: string
+          description: Nombre o nombres de la persona.
+        fatherLastName:
+          type: string
+          description: Apellido paterno.
+        motherLastName:
+          type: string
+          nullable: true
+          description: Apellido materno (opcional).
+        phone:
+          type: string
+          nullable: true
+          description: Teléfono de contacto (opcional).
+        status:
+          type: string
+          description: Estado del usuario (A=activo, I=inactivo).
+          enum: [A, I]
+        mfa:
+          type: object
+          description: Configuración de los factores MFA del usuario.
+          properties:
+            totp:
+              $ref: "#/components/schemas/MfaFactor"
+            sms:
+              $ref: "#/components/schemas/MfaFactor"
+            email:
+              $ref: "#/components/schemas/MfaFactor"
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha/hora de creación del registro.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha/hora de la última actualización.
+
+    MfaFactor:
+      type: object
+      description: Estado de un factor MFA del usuario.
+      properties:
+        active:
+          type: boolean
+          description: Indica si el factor MFA está activado para el usuario.
+        verified:
+          type: boolean
+          description: Indica si el factor MFA fue verificado (enrolado).
+
+    Person:
+      type: object
+      description: Datos maestros de la persona (PostgreSQL, snake_case).
+      properties:
+        id:
+          type: integer
+          description: Identificador interno de la persona.
+        tenant_id:
+          type: integer
+          description: Identificador del tenant al que pertenece.
+        first_name:
+          type: string
+          description: Nombre o nombres de la persona.
+        father_last_name:
+          type: string
+          description: Apellido paterno.
+        mother_last_name:
+          type: string
+          nullable: true
+          description: Apellido materno (opcional).
+        document_type:
+          type: string
+          description: Tipo de documento (D=DNI, R=RUC, C=Carnet de extranjería).
+        document_number:
+          type: string
+          description: Número del documento de identidad.
+        email:
+          type: string
+          description: Correo electrónico de la persona.
+        phone:
+          type: string
+          nullable: true
+          description: Teléfono de contacto (opcional).
+        status:
+          type: string
+          description: Estado de la persona (A=activo, I=inactivo).
+
+    Role:
+      type: object
+      description: Rol del RBAC (PostgreSQL, snake_case).
+      properties:
+        id:
+          type: integer
+          description: Identificador interno del rol.
+        tenant_id:
+          type: integer
+          description: Identificador del tenant al que pertenece.
+        code:
+          type: string
+          description: Código único del rol (ej. ADMIN).
+          example: ADMIN
+        name:
+          type: string
+          description: Nombre descriptivo del rol.
+        description:
+          type: string
+          nullable: true
+          description: Descripción del rol (opcional).
+        status:
+          type: string
+          description: Estado del rol (A=activo, I=inactivo).
+
+    Permission:
+      type: object
+      description: Permiso del RBAC (PostgreSQL, snake_case).
+      properties:
+        id:
+          type: integer
+          description: Identificador interno del permiso.
+        tenant_id:
+          type: integer
+          description: Identificador del tenant al que pertenece.
+        code:
+          type: string
+          description: Código único del permiso (ej. user.create).
+          example: user.create
+        name:
+          type: string
+          description: Nombre descriptivo del permiso.
+        description:
+          type: string
+          nullable: true
+          description: Descripción del permiso (opcional).
+        status:
+          type: string
+          description: Estado del permiso (A=activo, I=inactivo).
+
+    AuditEvent:
+      type: object
+      description: Evento de auditoría (DynamoDB TBL_GREIP_SEGURIDAD_AUDITORIA).
+      properties:
+        pk:
+          type: string
+          description: Partition key del evento (formato TENANT#<tenant>).
+          example: TENANT#GREIP
+        sk:
+          type: string
+          description: Sort key del evento (formato EVENT#<fechaISO>#<eventId>).
+          example: EVENT#2026-08-07T12:00:00.000Z#abc123
+        eventId:
+          type: string
+          description: Identificador único del evento.
+        tenant:
+          type: string
+          description: Código del tenant al que pertenece el evento.
+        action:
+          type: string
+          description: Acción registrada (USER_LOGIN, USER_CREATED, ...).
+          example: USER_CREATED
+        entity:
+          type: string
+          description: Tipo de entidad afectada.
+          enum: [USER, SESSION, ROLE, MFA, AUDIT]
+        entityId:
+          type: string
+          nullable: true
+          description: Identificador de la entidad afectada (opcional).
+        actor:
+          type: string
+          nullable: true
+          description: Usuario que ejecutó la acción (email o userId).
+        sourceIp:
+          type: string
+          nullable: true
+          description: IP de origen de la solicitud.
+        userAgent:
+          type: string
+          nullable: true
+          description: User-Agent del cliente.
+        detail:
+          type: object
+          nullable: true
+          description: Detalles adicionales del evento (varía por acción).
+        date:
+          type: string
+          format: date-time
+          description: Fecha/hora del evento (ISO 8601).
+        expiresAt:
+          type: integer
+          description: TTL (epoch segundos)
+
+    Product:
+      type: object
+      description: Producto del catálogo (service-catalogs, camelCase).
+      properties:
+        productId:
+          type: integer
+          description: Identificador único del producto.
+        name:
+          type: string
+          description: Nombre del producto.
+        description:
+          type: string
+          nullable: true
+          description: Descripción del producto (opcional).
+        price:
+          type: number
+          format: double
+          description: Precio del producto (mayor o igual a 0).
+        currency:
+          type: string
+          description: Moneda del precio.
+          enum: [PEN, USD]
+        status:
+          type: string
+          description: Estado del producto (A=activo, I=inactivo).
+          enum: [A, I]
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha/hora de creación del registro.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha/hora de la última actualización.
+
+    # ===================== Requests =====================
+    CreateUserRequest:
+      type: object
+      required: [email, documentType, documentNumber, firstName, fatherLastName]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Correo electrónico de acceso (único por tenant).
+          example: nuevo@greip.com.pe
+        documentType:
+          type: string
+          description: Tipo de documento de identidad.
+          enum: [D, R, C]
+          example: D
+        documentNumber:
+          type: string
+          description: Número del documento de identidad (único por tenant).
+          example: "12345678"
+        firstName:
+          type: string
+          description: Nombre o nombres de la persona.
+          example: Juan
+        fatherLastName:
+          type: string
+          description: Apellido paterno.
+          example: Perez
+        motherLastName:
+          type: string
+          description: Apellido materno (opcional).
+          example: Garcia
+        phone:
+          type: string
+          description: Teléfono de contacto (opcional).
+          example: "+51999888777"
+        password:
+          type: string
+          minLength: 8
+          description: Si no se envía, se genera una contraseña temporal (devuelta en generatedPassword).
+
+    UpdateUserRequest:
+      type: object
+      description: Campos actualizables de un usuario. Solo se aplican los presentes.
+      properties:
+        email:
+          type: string
+          format: email
+          description: Nuevo correo electrónico de acceso (único por tenant).
+        documentType:
+          type: string
+          description: Tipo de documento de identidad.
+          enum: [D, R, C]
+        documentNumber:
+          type: string
+          description: Número del documento de identidad.
+        firstName:
+          type: string
+          description: Nombre o nombres de la persona.
+        fatherLastName:
+          type: string
+          description: Apellido paterno.
+        motherLastName:
+          type: string
+          description: Apellido materno (opcional).
+        phone:
+          type: string
+          description: Teléfono de contacto (opcional).
+        status:
+          type: string
+          description: Estado del usuario.
+          enum: [A, I]
+
+    ProductRequest:
+      type: object
+      required: [name, price]
+      properties:
+        name:
+          type: string
+          description: Nombre del producto.
+          example: Consultoria TI
+        description:
+          type: string
+          nullable: true
+          description: Descripción del producto (opcional).
+        price:
+          type: number
+          format: double
+          minimum: 0
+          description: Precio del producto (mayor o igual a 0).
+          example: 1500.5
+        currency:
+          type: string
+          description: Moneda del precio.
+          enum: [PEN, USD]
+          default: PEN
+        status:
+          type: string
+          description: Estado del producto.
+          enum: [A, I]
+          default: A

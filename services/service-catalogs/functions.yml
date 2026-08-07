@@ -1,0 +1,62 @@
+PRODUCT_LMB:
+    handler: dist/product-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-PRODUCT
+    description: Lambda de apis para gestionar el catalogo de productos de GREIP COMPANY
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-postgresdb:${self:custom.config.lyPgNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/product-lmb/**/*.js'
+        - 'dist/product-lmb/**/*.ts'
+    events:
+      - http:
+          path: /product
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/product-lmb/listProducts.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /product/{productId}
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/product-lmb/getProduct.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /product
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/product-lmb/createProduct.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /product/{productId}
+          method: put
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/product-lmb/updateProduct.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /product/{productId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/product-lmb/deleteProduct.vm)}
+          response: ${file(config/serverless/http-response.yml)}

@@ -1,0 +1,13 @@
+process.env.PG_SECRET_DB = 'Greip/postgres/dev';
+process.env.LAMBDA_PREFIX = 'SRV-SECURITY-LMB';
+process.env.TABLA_USUARIOS = 'TBL_GREIP_USUARIOS_DEV';
+process.env.TABLA_SESIONES = 'TBL_GREIP_SEGURIDAD_SESIONES_DEV';
+process.env.TABLA_AUDITORIA = 'TBL_GREIP_SEGURIDAD_AUDITORIA_DEV';
+process.env.TABLA_MFA = 'TBL_GREIP_SEGURIDAD_MFA_DEV';
+process.env.TENANT_DEFAULT = 'GREIP';
+process.env.SM_JWT_PRIVATE_KEY = 'Greip/JWT-Private';
+process.env.SM_JWT_PUBLIC_KEY = 'Greip/JWT-Public';
+process.env.SM_ENCRIPTACION_TOKEN = 'Greip/Encriptacion/Token';
+process.env.SM_ENCRIPTACION_GREIP = 'Greip/Encriptacion';
+process.env.LMB_SMS = 'SRV-CROSS-LMB-SMS';
+process.env.LMB_EMAIL = 'SRV-CROSS-LMB-EMAIL';

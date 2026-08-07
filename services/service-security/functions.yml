@@ -1,0 +1,292 @@
+# =========================================================
+# service-security | GREIP COMPANY
+# Lambdas: AUTH_LMB (auth+password), USUARIO_LMB (user+rbac),
+#          AUDIT_LMB (consulta auditoria) y AUDIT_STREAM_LMB
+#          (procesador del DynamoDB Stream de USUARIOS).
+# =========================================================
+
+AUTH_LMB:
+    handler: dist/auth-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-AUTH
+    description: Lambda de autenticacion y gestion de contrasenas de GREIP COMPANY (login, MFA, refresh, logout)
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-postgresdb:${self:custom.config.lyPgNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/auth-lmb/**/*.js'
+        - 'dist/auth-lmb/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'
+    events:
+      - http:
+          path: /auth/login
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/login.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/mfa/verify
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/verificarMfa.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/refresh
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/refrescarToken.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/logout
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/logout.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/password/change
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/cambiarContrasena.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/password/recovery
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/solicitarRecuperacion.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/password/reset
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/reestablecerContrasena.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+
+USUARIO_LMB:
+    handler: dist/usuario-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-USUARIO
+    description: Lambda de gestion de usuarios y RBAC (roles/permisos) de GREIP COMPANY
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-postgresdb:${self:custom.config.lyPgNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/usuario-lmb/**/*.js'
+        - 'dist/usuario-lmb/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'
+    events:
+      - http:
+          path: /user
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/crearUsuario.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/listarUsuarios.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/obtenerUsuario.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}
+          method: put
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/actualizarUsuario.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/eliminarUsuario.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/roles
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/asignarRoles.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/roles/{roleId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/quitarRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/permissions
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/obtenerPermisos.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/listarRoles.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/crearRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /permission
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/listarPermisos.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+
+AUDIT_LMB:
+    handler: dist/audit-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-AUDIT
+    description: Lambda de consulta de auditoria de seguridad de GREIP COMPANY
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/audit-lmb/**/*.js'
+        - 'dist/audit-lmb/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'
+    events:
+      - http:
+          path: /audit
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/audit-lmb/listarAuditoria.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /audit/{sk}
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/audit-lmb/obtenerAuditoria.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+
+# Utilidad de bootstrap: crea el rol ADMIN con todos los permisos y el usuario
+# administrador inicial. Sin evento HTTP; se invoca manualmente por CLI.
+BOOTSTRAP_LMB:
+    handler: dist/bootstrap/handler.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-BOOTSTRAP
+    description: Utilidad de bootstrap de usuarios y RBAC de GREIP COMPANY (invocacion manual)
+    timeout: 120
+    memorySize: 1024
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-postgresdb:${self:custom.config.lyPgNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/bootstrap/**/*.js'
+        - 'dist/bootstrap/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'
+
+# Procesador del DynamoDB Stream de USUARIOS (NEW_AND_OLD_IMAGES).
+# Escribe los cambios de usuario en la tabla de auditoria.
+AUDIT_STREAM_LMB:
+    handler: dist/audit-lmb/stream.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-AUDIT-STREAM
+    description: Procesador del DynamoDB Stream de USUARIOS de GREIP COMPANY (auditoria de cambios)
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/audit-lmb/**/*.js'
+        - 'dist/audit-lmb/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'
+    events:
+      - stream:
+          type: dynamodb
+          arn: ${self:custom.config.dynamoStreamUsuarios.${self:custom.stageDeploy}}
+          batchSize: 10
+          startingPosition: TRIM_HORIZON
+          maximumRetryAttempts: 5
+          bisectBatchOnFunctionError: true
+          maximumRecordAgeInSeconds: 86400

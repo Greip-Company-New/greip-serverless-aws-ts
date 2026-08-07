@@ -1,0 +1,10 @@
+[Unit]
+Description=Ejecuta diariamente el backup de PostgreSQL de GREIP COMPANY
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+Unit=greip-backup.service
+
+[Install]
+WantedBy=timers.target

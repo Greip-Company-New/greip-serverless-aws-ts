@@ -1,0 +1,44 @@
+{
+  "name": "ly-nodejs-ts-postgresdb",
+  "version": "1.0.0",
+  "description": "Layer Typescript + PostgreSQL con metodos para interactuar con la base de datos (GREIP COMPANY).",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "npm run clean && tsc --project tsconfig.json && esbuild src/index.ts --bundle --platform=node --format=cjs --outfile=dist/index.cjs --external:pg --external:@aws-sdk/* --external:dotenv --external:winston --external:joi",
+    "package": "npm run build && mkdir -p nodejs && cp package.json nodejs/ && (cd nodejs && NODE_ENV=production npm install --omit=dev --omit=peer) && mkdir -p nodejs/node_modules/ly-nodejs-ts-postgresdb && cp package.json nodejs/node_modules/ly-nodejs-ts-postgresdb/ && cp -r dist nodejs/node_modules/ly-nodejs-ts-postgresdb/",
+    "deploy": "bash deploy-layer.sh",
+    "deploy:dev": "bash deploy-layer.sh devGreipCompany",
+    "clean": "rm -rf dist nodejs"
+  },
+  "dependencies": {
+    "pg": "^8.13.1",
+    "@aws-sdk/client-secrets-manager": "^3.0.0",
+    "dotenv": "^16.0.0",
+    "winston": "^3.0.0",
+    "joi": "^17.0.0"
+  },
+  "engines": {
+    "node": ">=18.x"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.10",
+    "@aws-sdk/types": "^3.0.0",
+    "@types/jest": "^29.5.0",
+    "typescript": "^5.0.0",
+    "esbuild": "^0.27.2",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0"
+  },
+  "keywords": [],
+  "author": "GREIP COMPANY",
+  "license": "MIT"
+}

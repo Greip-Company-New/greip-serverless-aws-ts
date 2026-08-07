@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Rol + instance profile para que el EC2 PostgreSQL de GREIP haga backups
+  (pg_dump) al bucket bk-greip-<suffix>/backups. DEV conserva los nombres
+  legacy (greip-ec2-backup); QA/PROD usan greip-ec2-backup-<ENV>.
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - DEV
+      - QA
+      - PROD
+    Default: DEV
+  BucketSuffix:
+    Type: String
+    Description: Sufijo en minusculas del bucket (dev|qa|prod).
+    AllowedValues:
+      - dev
+      - qa
+      - prod
+    Default: dev
+
+Conditions:
+  IsDev: !Equals [!Ref Environment, DEV]
+
+Resources:
+  BackupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !If
+        - IsDev
+        - greip-ec2-backup
+        - !Sub 'greip-ec2-backup-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: GreipS3Backup
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:aws:s3:::bk-greip-${BucketSuffix}'
+                  - !Sub 'arn:aws:s3:::bk-greip-${BucketSuffix}/backups/*'
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  BackupInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !If
+        - IsDev
+        - greip-ec2-backup-profile
+        - !Sub 'greip-ec2-backup-profile-${Environment}'
+      Roles:
+        - !Ref BackupRole
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt BackupRole.Arn
+  InstanceProfileName:
+    Value: !Ref BackupInstanceProfile

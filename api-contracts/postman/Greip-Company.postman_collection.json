@@ -1,0 +1,905 @@
+{
+  "info": {
+    "name": "GREIP COMPANY - API",
+    "description": "Colección Postman de las APIs de GREIP COMPANY (DEV).\n\nServicios:\n- service-security (base path /srv-security): autenticación (auth), usuarios + RBAC (user/role/permission) y auditoría (audit).\n- service-catalogs (base path /srv-catalogs): catálogo de productos (product).\n\nAutenticación:\n- Todos los endpoints requieren header `x-api-key` (variable apiKey).\n- Los endpoints protegidos requieren `Authorization: Bearer <token>` (variable token) y permisos RBAC.\n\nEl request 'Login' guarda automáticamente el access token en la variable `token`; el 'Create user' guarda `userId`; el 'Create role' guarda `roleId`; el 'Create product' guarda `productId`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "api-server",
+      "value": "https://apidev.greip.com.pe"
+    },
+    {
+      "key": "ak-service-security",
+      "value": "{{ak-service-security}}"
+    },
+    {
+      "key": "ak-service-catalogs",
+      "value": "{{ak-service-catalogs}}"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "roleId",
+      "value": ""
+    },
+    {
+      "key": "sk",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "service-security / Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@greip.com.pe\",\n  \"password\": \"Greip#2026\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/login",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Iniciar sesión por email (o documentType + documentNumber). Si el usuario tiene MFA activo, responde un desafío en lugar de tokens."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json().payload;",
+                  "if (body && body.data && body.data.accessToken) {",
+                  "  pm.collectionVariables.set('token', body.data.accessToken);",
+                  "  console.log('Token guardado');",
+                  "} else {",
+                  "  console.log('Login sin accessToken (posible desafío MFA):', JSON.stringify(body));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify MFA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mfaToken\": \"eyJ...\",\n  \"challengeId\": \"uuid-del-desafio\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/mfa/verify",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "mfa",
+                "verify"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"eyJ...\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/refresh",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "refresh"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"eyJ...\",\n  \"logoutAll\": false\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/logout",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Greip#2026\",\n  \"newPassword\": \"Nueva#Pass2026\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/password/change",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "password",
+                "change"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Request password recovery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@greip.com.pe\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/password/recovery",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "password",
+                "recovery"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resetToken\": \"eyJ...\",\n  \"newPassword\": \"Nueva#Pass2026\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/password/reset",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "password",
+                "reset"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-security / User",
+      "item": [
+        {
+          "name": "Create user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo@greip.com.pe\",\n  \"documentType\": \"D\",\n  \"documentNumber\": \"12345678\",\n  \"firstName\": \"Juan\",\n  \"fatherLastName\": \"Perez\",\n  \"motherLastName\": \"Garcia\",\n  \"phone\": \"+51999888777\",\n  \"password\": \"Temporal#2026\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/user",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user"
+              ]
+            },
+            "description": "Requiere permiso user.create. Si no se envía password, se devuelve una contraseña temporal en generatedPassword."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json().payload;",
+                  "if (body && body.data && body.data.user && body.data.user.userId) {",
+                  "  pm.collectionVariables.set('userId', body.data.user.userId);",
+                  "  console.log('userId guardado:', body.data.user.userId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user?page=1&pageSize=10&status=A",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "A"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+51999111222\",\n  \"motherLastName\": \"Quispe\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete user",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign roles",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roles\": [\"{{roleId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}/roles",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}",
+                "roles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}/roles/{{roleId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}",
+                "roles",
+                "{{roleId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get user permissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}/permissions",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}",
+                "permissions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"OPERADOR\",\n  \"name\": \"Operador\",\n  \"description\": \"Rol operador\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-security/role",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json().payload;",
+                  "if (body && body.data && body.data.id) {",
+                  "  pm.collectionVariables.set('roleId', String(body.data.id));",
+                  "  console.log('roleId guardado:', body.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "List permissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/permission",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "permission"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-security / Audit",
+      "item": [
+        {
+          "name": "List audit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/audit?page=1&pageSize=10",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "audit"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get audit event",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/audit/{{sk}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "audit",
+                "{{sk}}"
+              ]
+            },
+            "description": "sk con formato EVENT#<fechaISO>#<eventId>. Copiar el sk desde la respuesta de List audit."
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-catalogs / Product",
+      "item": [
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-catalog}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-catalogs/product?page=1&pageSize=10&status=A",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-catalogs",
+                "product"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "A"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get product",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-catalog}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-catalogs/product/{{productId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-catalogs",
+                "product",
+                "{{productId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-catalog}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Consultoria TI\",\n  \"description\": \"Servicio de consultoria\",\n  \"price\": 1500.5,\n  \"currency\": \"PEN\",\n  \"status\": \"A\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-catalogs/product",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-catalogs",
+                "product"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json().payload;",
+                  "if (body && body.data && body.data.productId) {",
+                  "  pm.collectionVariables.set('productId', String(body.data.productId));",
+                  "  console.log('productId guardado:', body.data.productId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-catalog}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Consultoria TI Premium\",\n  \"description\": \"Servicio de consultoria premium\",\n  \"price\": 2500.0,\n  \"currency\": \"PEN\",\n  \"status\": \"A\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-catalogs/product/{{productId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-catalogs",
+                "product",
+                "{{productId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-catalog}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-catalogs/product/{{productId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-catalogs",
+                "product",
+                "{{productId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

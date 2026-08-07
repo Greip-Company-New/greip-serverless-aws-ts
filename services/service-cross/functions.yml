@@ -1,0 +1,75 @@
+EMAIL_LMB:
+    handler: dist/email-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-EMAIL
+    description: Lambda generica de envio de correos (SES) para notificaciones de GREIP COMPANY
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/email-lmb/**/*.js'
+        - 'dist/email-lmb/**/*.ts'
+    events:
+      - http:
+          path: /cross/email
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/email-lmb/enviarEmail.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+
+SMS_LMB:
+    handler: dist/sms-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-SMS
+    description: Lambda generica de envio de SMS (SNS) para notificaciones de GREIP COMPANY
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/sms-lmb/**/*.js'
+        - 'dist/sms-lmb/**/*.ts'
+    events:
+      - http:
+          path: /cross/sms
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/sms-lmb/enviarSms.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+
+TOKEN_LMB:
+    handler: dist/token-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-TOKEN
+    description: Lambda generica de cifrado y descifrado de la data de tokens JWT de GREIP COMPANY
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/token-lmb/**/*.js'
+        - 'dist/token-lmb/**/*.ts'
+    events:
+      - http:
+          path: /cross/token/encrypt
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/token-lmb/encryptToken.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /cross/token/decrypt
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/token-lmb/decryptToken.vm)}
+          response: ${file(config/serverless/http-response.yml)}
