@@ -8,7 +8,6 @@ Contrato OpenAPI 3.0.3 y colección Postman de las APIs de GREIP COMPANY (DEV).
 |---------|-------------|
 | `openapi.yaml` | Contrato OpenAPI 3.0.3 de `service-security`, `service-catalogs` y `service-cross`. |
 | `postman/Greip-Company.postman_collection.json` | Colección Postman (29 requests) lista para importar. |
-
 ## Flujo de prueba (DEV)
 
 1. **Bootstrap** (una sola vez): invocar `SRV-SECURITY-LMB-BOOTSTRAP` por CLI para crear el rol `ADMIN`, el usuario admin inicial y asignar el rol. Las credenciales se pasan en el `env` del payload (el CLI v2 de AWS requiere el payload en **base64**):
@@ -23,9 +22,10 @@ Contrato OpenAPI 3.0.3 y colección Postman de las APIs de GREIP COMPANY (DEV).
 
 3. **Configurar variables** de la colección:
    - `api-server` → `https://apidev.greip.com.pe`
-   - `ak-service-security` → API Key de `service-security` (ya incluida por defecto)
-   - `ak-service-catalogs` → API Key de `service-catalogs` (a definir por el usuario)
-   - `ak-service-cross` → API Key de `service-cross` (a definir por el usuario)
+   - `canal` → canal con el que pruebas (valores: `AppWeb`, `AppMovil`, `Chatbot`, `Whatsapp`). Se envía en el header `Canal` de todos los requests y el token solo es válido para ese canal.
+   - `ak-service-security` → API Key de `service-security`
+   - `ak-service-catalogs` → API Key de `service-catalogs`
+   - `ak-service-cross` → API Key de `service-cross`
 
    API Keys DEV (recuperadas de API Gateway):
    - `service-security`: `<SECRETO: ver API Gateway / Secrets Manager>`
@@ -35,7 +35,7 @@ Contrato OpenAPI 3.0.3 y colección Postman de las APIs de GREIP COMPANY (DEV).
    > Estas keys son de DEV. No commitearlas ni usarlas fuera del entorno DEV.
 
 4. **Probar en orden**:
-   - `Auth > Login` (guarda el `accessToken` en la variable `token` automáticamente).
+   - `Auth > Login` (guarda el `accessToken` en la variable `token` automáticamente; el token queda ligado al `canal`).
    - `User > Create user` (guarda `userId`), `Role > Create role` (guarda `roleId`).
    - `User > Assign roles`, `User > Get user permissions`, etc.
    - `Product > Create product` (guarda `productId`) y el resto de CRUD (requieren el `token` en `Authorization: Bearer`).
