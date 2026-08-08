@@ -6,9 +6,8 @@ Cada servicio es un proyecto Serverless independiente, orquestado por `serverles
 
 | Servicio | Dominio | Persistencia | Base path | Estado |
 |----------|---------|--------------|-----------|--------|
-| `service-catalogs` | Catálogos (productos) | Postgres en EC2 | `/srv-catalogs` | Nuevo (reemplaza a service-core-be); pendiente de deploy |
+| `service-catalogs` | Catálogos (productos) | Postgres en EC2 | `/srv-catalogs` | Desplegado DEV (auth JWT + auditoría) |
 | `service-security` | Seguridad (auth, usuarios, RBAC, auditoría) | DynamoDB + Postgres en EC2 | `/srv-security` | Estructura completa, build/tests OK en DEV |
-| `service-canales` | Canales (usuarios, archivos) | DynamoDB + S3 | `/srv-canales` | Pendiente |
 | `service-cross` | Transversal (email, SMS, cifrado token) | Sin persistencia | `/srv-cross` | Estructura completa, build/tests OK |
 
 ## Convención de nomenclatura
