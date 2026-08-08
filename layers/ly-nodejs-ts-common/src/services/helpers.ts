@@ -200,6 +200,24 @@ export class Helpers {
     }
 
     /**
+     * Construye el detalle de cambios de una entidad comparando los campos
+     * definidos en `fields`. Devuelve { campo: { before, after } } solo para
+     * los campos que difieren. Sirve para CREATE (before=null), UPDATE y
+     * DELETE (after=null) de forma unificada.
+     */
+    static buildEntityChanges(before: Record<string, any> | null, after: Record<string, any> | null, fields: string[]): Record<string, any> {
+        const cambios: Record<string, any> = {};
+        for (const campo of fields) {
+            const vAntes = before ? before[campo] : null;
+            const vDespues = after ? after[campo] : null;
+            if (String(vAntes ?? '') !== String(vDespues ?? '')) {
+                cambios[campo] = { before: vAntes, after: vDespues };
+            }
+        }
+        return cambios;
+    }
+
+    /**
      * Registra un cambio de entidad en el historico de auditoria (entity_change_log)
      * invocando por Lambda-to-Lambda el microservicio ENTITY_AUDIT_LMB.
      */

@@ -10,6 +10,19 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   C: 'Carnet de Extranjeria'
 };
 
+// Campos de la entidad User que se auditan en el historico de cambios.
+// Usan el nombre camelCase que devuelve el perfil (getUser).
+export const USER_AUDIT_FIELDS = [
+  'email',
+  'firstName',
+  'fatherLastName',
+  'motherLastName',
+  'documentType',
+  'documentNumber',
+  'phone',
+  'status'
+];
+
 // Canales MFA soportados
 export const MFA_CHANNELS = ['TOTP', 'SMS', 'EMAIL'] as const;
 export const TOKEN_TYPE_ACCESS = 'ACCESS';

@@ -2,7 +2,7 @@
 import { UsuarioService } from '../common/usuario-service';
 import { registerAudit } from '../common/audit';
 import { Helpers, DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from 'ly-nodejs-ts-common';
-import { AUDIT_EVENTS } from '../common/constants';
+import { AUDIT_EVENTS, USER_AUDIT_FIELDS } from '../common/constants';
 
 export default class UsuarioLmbService {
   private usuarioService: UsuarioService;
@@ -44,13 +44,7 @@ export default class UsuarioLmbService {
       status: 'A',
       userId: identity?.sub || 'SYSTEM',
       channel,
-      changes: {
-        email: { before: null, after: resultado.user.email },
-        documentType: { before: null, after: resultado.user.documentType },
-        documentNumber: { before: null, after: resultado.user.documentNumber },
-        firstName: { before: null, after: resultado.user.firstName },
-        fatherLastName: { before: null, after: resultado.user.fatherLastName }
-      }
+      changes: Helpers.buildEntityChanges(null, resultado.user, USER_AUDIT_FIELDS)
     }).catch((err) => console.error('[entity-audit] createUser fallo', err));
     return resultado;
   }
@@ -75,21 +69,10 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
-    const mapeo = {
-      email: 'email',
-      firstName: 'firstName',
-      fatherLastName: 'fatherLastName',
-      motherLastName: 'motherLastName',
-      documentType: 'documentType',
-      documentNumber: 'documentNumber',
-      phone: 'phone',
-      status: 'status'
-    };
-    const cambios: Record<string, any> = {};
-    for (const key of Object.keys(campos)) {
-      const campo = (mapeo as any)[key] || key;
-      cambios[campo] = { before: antes?.user?.[campo] ?? null, after: campos[key] };
-    }
+    const mapeo = USER_AUDIT_FIELDS;
+    const antesUser = antes?.user || null;
+    const despuesUser = { ...antesUser, ...campos };
+    const cambios = Helpers.buildEntityChanges(antesUser, despuesUser, mapeo);
     await Helpers.registerEntityChange({
       entity: 'user',
       entityKey: userId,
@@ -109,6 +92,7 @@ export default class UsuarioLmbService {
     if (!userId) {
       throw new Error('userId es obligatorio');
     }
+    const antes = await this.usuarioService.getUser(userId);
     await this.usuarioService.deleteUser(userId, identity?.sub, channel);
     await registerAudit(
       {
@@ -122,6 +106,7 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
+    const antesUser = antes?.user || null;
     await Helpers.registerEntityChange({
       entity: 'user',
       entityKey: userId,
@@ -130,7 +115,7 @@ export default class UsuarioLmbService {
       status: 'I',
       userId: identity?.sub || 'SYSTEM',
       channel,
-      changes: { status: { before: 'A', after: 'I' } }
+      changes: Helpers.buildEntityChanges(antesUser, null, USER_AUDIT_FIELDS)
     }).catch((err) => console.error('[entity-audit] deleteUser fallo', err));
     return { deleted: true };
   }

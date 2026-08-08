@@ -1,5 +1,6 @@
 import { ResponseFactory, Helpers, DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from 'ly-nodejs-ts-common';
 import { Repository } from './repository';
+import { PRODUCT_AUDIT_FIELDS } from './constants';
 
 function tenantIdFromIdentity(payload: any): number {
   const tenantId = payload.identity?.tenantId;
@@ -61,12 +62,7 @@ export default class Service {
                 status: product.status,
                 userId: payload.identity?.sub || 'SYSTEM',
                 channel,
-                changes: {
-                    name: { before: null, after: product.name },
-                    description: { before: null, after: product.description || '' },
-                    price: { before: null, after: product.price },
-                    currency: { before: null, after: product.currency }
-                }
+                changes: Helpers.buildEntityChanges(null, product, PRODUCT_AUDIT_FIELDS)
             }).catch((err) => console.error('[entity-audit] createProduct fallo', err));
             return ResponseFactory.created(product, `Producto creado exitosamente (id=${product.productId})`);
         } catch (err: any) {
@@ -92,14 +88,7 @@ export default class Service {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });
             }
             if (antes) {
-                const cambios: Record<string, any> = {};
-                for (const campo of ['name', 'description', 'price', 'currency', 'status']) {
-                    const vAntes = (antes as any)[campo];
-                    const vDespues = (product as any)[campo];
-                    if (String(vAntes ?? '') !== String(vDespues ?? '')) {
-                        cambios[campo] = { before: vAntes, after: vDespues };
-                    }
-                }
+                const cambios = Helpers.buildEntityChanges(antes, product, PRODUCT_AUDIT_FIELDS);
                 if (Object.keys(cambios).length > 0) {
                     Helpers.registerEntityChange({
                         entity: 'product',
@@ -139,13 +128,7 @@ export default class Service {
                 status: 'I',
                 userId: payload.identity?.sub || 'SYSTEM',
                 channel,
-                changes: antes ? {
-                    name: { before: antes.name, after: null },
-                    description: { before: antes.description || '', after: null },
-                    price: { before: antes.price, after: null },
-                    currency: { before: antes.currency, after: null },
-                    status: { before: antes.status, after: 'I' }
-                } : { status: { before: 'A', after: 'I' } }
+                changes: Helpers.buildEntityChanges(antes, null, PRODUCT_AUDIT_FIELDS)
             }).catch((err) => console.error('[entity-audit] deleteProduct fallo', err));
             return ResponseFactory.deleted(`Producto eliminado exitosamente (id=${productId})`);
         } catch (err: any) {
