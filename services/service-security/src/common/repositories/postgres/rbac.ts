@@ -8,6 +8,7 @@ import {
   CREATE_PERSON_QUERY,
   CREATE_USER_PERSON_QUERY,
   GET_USER_PERSON_QUERY,
+  UPDATE_PERSON_QUERY,
   LIST_ROLES_QUERY,
   CREATE_ROLE_QUERY,
   GET_ROLE_QUERY,
@@ -66,6 +67,22 @@ export class RbacRepository {
 
   async getUserPerson(userId: string): Promise<PersonaRow | null> {
     return await this.db.executeOne<PersonaRow>(GET_USER_PERSON_QUERY, [userId]);
+  }
+
+  async updatePerson(personId: string, campos: Partial<PersonaRow>, updatedBy?: string): Promise<PersonaRow | null> {
+    const rows = await this.db.execute<PersonaRow>(UPDATE_PERSON_QUERY, [
+      personId,
+      campos.first_name,
+      campos.father_last_name,
+      campos.mother_last_name,
+      campos.document_type,
+      campos.document_number,
+      campos.email,
+      campos.phone,
+      campos.status,
+      updatedBy || 'SYSTEM'
+    ]);
+    return rows.rows[0] || null;
   }
 
   async listRoles(tenantId: string): Promise<RolRow[]> {

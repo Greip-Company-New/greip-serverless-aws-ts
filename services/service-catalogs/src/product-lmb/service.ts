@@ -39,7 +39,7 @@ export default class Service {
             const product = await repository.createProduct({
                 ...payload,
                 tenantId: payload.tenantId,
-                createdBy: payload.createdBy
+                createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM'
             });
             return ResponseFactory.created(product, `Producto creado exitosamente (id=${product.productId})`);
         } catch (err: any) {
@@ -54,7 +54,7 @@ export default class Service {
             const repository = new Repository();
             const product = await repository.updateProduct(productId, {
                 ...payload,
-                createdBy: payload.createdBy
+                createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM'
             });
             if (!product) {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });

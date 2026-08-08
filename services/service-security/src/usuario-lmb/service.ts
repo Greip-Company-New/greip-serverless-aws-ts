@@ -21,7 +21,7 @@ export default class UsuarioLmbService {
 
   async createUser(payload: any, identity: any): Promise<any> {
     const { ip, userAgent } = this.ctx(payload);
-    const resultado = await this.usuarioService.createUser({ ...payload, createdBy: identity?.sub || payload.email });
+    const resultado = await this.usuarioService.createUser({ ...payload, createdBy: identity?.sub || 'SYSTEM' });
     await registerAudit(
       {
         action: AUDIT_EVENTS.USER_CREATED,
@@ -65,7 +65,7 @@ export default class UsuarioLmbService {
     if (!userId) {
       throw new Error('userId es obligatorio');
     }
-    await this.usuarioService.deleteUser(userId);
+    await this.usuarioService.deleteUser(userId, identity?.sub);
     await registerAudit(
       {
         action: AUDIT_EVENTS.USER_DELETED,

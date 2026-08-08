@@ -1,5 +1,6 @@
 import controller from './controller';
 import { addMiddleware, bootstrap, ApiGatewayEvent } from 'ly-nodejs-ts-common';
+import AuthMiddleware from './auth';
 
 const RequestIdMiddleware = () => ({
     before: (handler: any) => {
@@ -11,5 +12,6 @@ const RequestIdMiddleware = () => ({
 
 addMiddleware(ApiGatewayEvent());
 addMiddleware(RequestIdMiddleware());
+addMiddleware(AuthMiddleware({ exclude: [] }));
 
 export const handler = bootstrap(controller);

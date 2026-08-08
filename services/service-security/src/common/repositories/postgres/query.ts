@@ -42,6 +42,23 @@ SELECT up.user_id, up.person_id, up.tenant_id, p.first_name, p.father_last_name,
   JOIN greip.person p ON p.id = up.person_id
  WHERE up.user_id = $1`;
 
+export const UPDATE_PERSON_QUERY = `
+UPDATE greip.person p
+   SET first_name = COALESCE($2, p.first_name),
+       father_last_name = COALESCE($3, p.father_last_name),
+       mother_last_name = COALESCE($4, p.mother_last_name),
+       document_type = COALESCE($5, p.document_type),
+       document_number = COALESCE($6, p.document_number),
+       email = COALESCE($7, p.email),
+       phone = COALESCE($8, p.phone),
+       status = COALESCE($9, p.status),
+       updated_by = $10,
+       updated_at = now()
+ WHERE p.id = $1
+RETURNING p.id, p.tenant_id, p.first_name, p.father_last_name, p.mother_last_name,
+          p.document_type, p.document_number, p.email, p.phone, p.status,
+          p.created_by, p.created_at, p.updated_by, p.updated_at`;
+
 export const LIST_ROLES_QUERY = `
 SELECT r.id, r.code, r.name, r.description, r.status,
        r.created_by, r.created_at, r.updated_by, r.updated_at

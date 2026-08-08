@@ -76,7 +76,7 @@ export class UsuarioService {
 
     const userId = crypto.randomUUID();
     const ahora = new Date().toISOString();
-    const createdBy = data.createdBy || data.email || 'SYSTEM';
+    const createdBy = data.createdBy || 'SYSTEM';
     const persona = await this.rbac.createPerson({
       tenant_id: tenant.id,
       first_name: data.firstName,
@@ -153,15 +153,30 @@ export class UsuarioService {
     if (!actualizado) {
       throw new Error('Usuario no encontrado');
     }
+
+    const personaActual = await this.rbac.getUserPerson(userId);
+    if (personaActual) {
+      await this.rbac.updatePerson(String(personaActual.person_id), {
+        first_name: campos.firstName,
+        father_last_name: campos.fatherLastName,
+        mother_last_name: campos.motherLastName,
+        document_type: campos.documentType,
+        document_number: campos.documentNumber,
+        email: campos.email ? campos.email.toLowerCase().trim() : undefined,
+        phone: campos.phone,
+        status: campos.status
+      }, actor);
+    }
+
     return mapPublicUser(actualizado);
   }
 
-  async deleteUser(userId: string): Promise<void> {
+  async deleteUser(userId: string, actor?: string): Promise<void> {
     const actual = await this.usuarioRepo.getById(userId);
     if (!actual) {
       throw new Error('Usuario no encontrado');
     }
-    await this.usuarioRepo.actualizar(userId, { status: STATUS_INACTIVE });
+    await this.usuarioRepo.actualizar(userId, { status: STATUS_INACTIVE, updatedBy: actor || 'SYSTEM' });
   }
 
   async getUser(userId: string): Promise<{ user: any; person: any; roles: any[]; permissions: string[] }> {

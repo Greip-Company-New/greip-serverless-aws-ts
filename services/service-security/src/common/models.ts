@@ -130,6 +130,8 @@ export interface TenantRow {
 
 export interface PersonaRow {
   id: number;
+  person_id?: number;
+  user_id?: string;
   tenant_id: number;
   first_name: string;
   father_last_name: string;

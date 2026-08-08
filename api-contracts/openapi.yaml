@@ -11,6 +11,9 @@ info:
     - Todos los endpoints requieren la API Key por header `x-api-key` (usage plan de API Gateway).
     - Los endpoints de `service-security` (salvo login/MFA/refresh/recuperación) requieren además
       `Authorization: Bearer <accessToken>` (JWT RS256) y permisos RBAC.
+    - Los endpoints de `service-catalogs` (`/product`) requieren también
+      `Authorization: Bearer <accessToken>` (JWT RS256). El `createdBy`/`updatedBy` de los
+      productos se toma del `sub` (userId) del token.
 
     **Envoltorio de respuestas:**
     - En **éxito** (200/201) el body es el objeto `Response` directamente:
@@ -681,6 +684,9 @@ paths:
       tags: [Product]
       summary: Listar productos (paginado y filtros)
       operationId: productList
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
@@ -715,6 +721,9 @@ paths:
       tags: [Product]
       summary: Crear producto
       operationId: productCreate
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -736,6 +745,9 @@ paths:
       tags: [Product]
       summary: Obtener producto por id
       operationId: productGet
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/ProductId"
       responses:
@@ -747,12 +759,17 @@ paths:
                 $ref: "#/components/schemas/ProductResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
     put:
       tags: [Product]
       summary: Actualizar producto
       operationId: productUpdate
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/ProductId"
       requestBody:
@@ -770,12 +787,17 @@ paths:
                 $ref: "#/components/schemas/ProductResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
       tags: [Product]
       summary: Eliminar producto
       operationId: productDelete
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/ProductId"
       responses:
@@ -787,6 +809,8 @@ paths:
                 $ref: "#/components/schemas/DeletedResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
 

@@ -76,6 +76,8 @@ provider:
     BUCKET: ${self:custom.config.bucketDeploy.${self:custom.stageDeploy}}
     LAMBDA_PREFIX: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}
     PG_SECRET_DB: ${self:custom.config.secretDataBase.${self:custom.stageDeploy}}
+    SM_JWT_PUBLIC_KEY: 'Greip/JWT-Public'
+    SM_ENCRIPTACION_TOKEN: 'Greip/Encriptacion/Token'
     PROFILE_DEPLOYMENT: ${self:provider.profile}
     AWS_ACCOUNT: ${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}
 
