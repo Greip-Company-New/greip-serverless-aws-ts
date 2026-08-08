@@ -77,6 +77,7 @@ export class UsuarioService {
     const userId = crypto.randomUUID();
     const ahora = new Date().toISOString();
     const createdBy = data.createdBy || 'SYSTEM';
+    const channel = data.channel || 'SYSTEM';
     const persona = await this.rbac.createPerson({
       tenant_id: tenant.id,
       first_name: data.firstName,
@@ -87,8 +88,8 @@ export class UsuarioService {
       email,
       phone: data.phone || null,
       status: STATUS_ACTIVE
-    }, createdBy);
-    await this.rbac.createUserPersonRelation(userId, String(persona.id), tenant.id, createdBy);
+    }, createdBy, channel);
+    await this.rbac.createUserPersonRelation(userId, String(persona.id), tenant.id, createdBy, channel);
 
     const usuario: UsuarioDynamo = {
       pk: this.usuarioRepo.userPk(userId),
@@ -115,8 +116,10 @@ export class UsuarioService {
         email: { active: false, verified: false }
       },
       createdBy,
+      createdByChannel: channel,
       createdAt: ahora,
       updatedBy: createdBy,
+      updatedByChannel: channel,
       updatedAt: ahora
     };
 
@@ -149,7 +152,7 @@ export class UsuarioService {
       }
     }
 
-    const actualizado = await this.usuarioRepo.actualizar(userId, { ...campos, updatedBy: actor || campos.updatedBy || actual.updatedBy });
+    const actualizado = await this.usuarioRepo.actualizar(userId, { ...campos, updatedBy: actor || campos.updatedBy || actual.updatedBy, updatedByChannel: campos.updatedByChannel || actual.updatedByChannel });
     if (!actualizado) {
       throw new Error('Usuario no encontrado');
     }
@@ -165,18 +168,18 @@ export class UsuarioService {
         email: campos.email ? campos.email.toLowerCase().trim() : undefined,
         phone: campos.phone,
         status: campos.status
-      }, actor);
+      }, actor, campos.channel || 'SYSTEM');
     }
 
     return mapPublicUser(actualizado);
   }
 
-  async deleteUser(userId: string, actor?: string): Promise<void> {
+  async deleteUser(userId: string, actor?: string, channel?: string): Promise<void> {
     const actual = await this.usuarioRepo.getById(userId);
     if (!actual) {
       throw new Error('Usuario no encontrado');
     }
-    await this.usuarioRepo.actualizar(userId, { status: STATUS_INACTIVE, updatedBy: actor || 'SYSTEM' });
+    await this.usuarioRepo.actualizar(userId, { status: STATUS_INACTIVE, updatedBy: actor || 'SYSTEM', updatedByChannel: channel || 'SYSTEM' });
   }
 
   async getUser(userId: string): Promise<{ user: any; person: any; roles: any[]; permissions: string[] }> {
@@ -195,20 +198,20 @@ export class UsuarioService {
     return { data: resultado.data.map(mapPublicUser), total: resultado.total };
   }
 
-  async assignRole(userId: string, roleId: string, actor?: string): Promise<void> {
+  async assignRole(userId: string, roleId: string, actor?: string, channel?: string): Promise<void> {
     const tenant = await this.tenantDefault();
     const rol = await this.rbac.getRole(roleId, tenant.id);
     if (!rol) {
       throw new Error('Rol no encontrado');
     }
-    await this.rbac.assignRole(userId, roleId, actor);
+    await this.rbac.assignRole(userId, roleId, actor, channel || 'SYSTEM');
   }
 
   async removeRole(userId: string, roleId: string): Promise<void> {
     await this.rbac.removeRole(userId, roleId);
   }
 
-  async createRole(data: any, actor?: string): Promise<any> {
+  async createRole(data: any, actor?: string, channel?: string): Promise<any> {
     const tenant = await this.tenantDefault();
     if (!data.code || !data.name) {
       throw new Error('code y name son obligatorios para el rol');
@@ -219,7 +222,7 @@ export class UsuarioService {
       name: data.name,
       description: data.description || null,
       status: STATUS_ACTIVE
-    }, actor);
+    }, actor, channel || 'SYSTEM');
   }
 
   async listRoles(): Promise<any[]> {

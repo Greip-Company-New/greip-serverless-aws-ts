@@ -39,7 +39,8 @@ export default class AuthService {
     return {
       requestId: payload?.requestId,
       ip: headers['X-Forwarded-For'] || headers['x-forwarded-for'] || headers['Source-Ip'] || '',
-      userAgent: headers['User-Agent'] || headers['user-agent'] || ''
+      userAgent: headers['User-Agent'] || headers['user-agent'] || '',
+      channel: headers['Canal'] || headers['canal'] || ''
     };
   }
 
@@ -49,8 +50,8 @@ export default class AuthService {
   }
 
   async login(payload: any): Promise<any> {
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
     const { email, documentType, documentNumber, password, channel } = payload;
-    const { ip, userAgent } = this.ctx(payload);
 
     const usuario = email
       ? await this.usuarioRepo.getByEmail(email)
@@ -117,9 +118,9 @@ export default class AuthService {
 
     const permissions = await this.usuarioService.getUserPermissions(usuario.userId);
     const roles = await this.usuarioService.getUserRoles(usuario.userId);
-    const resultado = await this.sesionService.startSession(usuario, { permissions, roles, userAgent, ip });
+    const resultado = await this.sesionService.startSession(usuario, { permissions, roles, userAgent, ip, channel: channelHeader });
     await registerAudit(
-      { action: AUDIT_EVENTS.LOGIN_SUCCESS, entity: 'USER', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
+      { action: AUDIT_EVENTS.LOGIN_SUCCESS, entity: 'USER', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent, detail: { canal: channelHeader } },
       usuario.tenant
     );
     return resultado;
@@ -127,7 +128,7 @@ export default class AuthService {
 
   async verifyMfa(payload: any): Promise<any> {
     const { mfaToken, challengeId, code } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
 
     let identidad: any;
     try {
@@ -155,9 +156,9 @@ export default class AuthService {
 
     const permissions = await this.usuarioService.getUserPermissions(usuario.userId);
     const roles = await this.usuarioService.getUserRoles(usuario.userId);
-    const resultado = await this.sesionService.startSession(usuario, { permissions, roles, userAgent, ip });
+    const resultado = await this.sesionService.startSession(usuario, { permissions, roles, userAgent, ip, channel: channelHeader });
     await registerAudit(
-      { action: AUDIT_EVENTS.MFA_VERIFIED, entity: 'MFA', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
+      { action: AUDIT_EVENTS.MFA_VERIFIED, entity: 'MFA', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent, detail: { canal: channelHeader } },
       usuario.tenant
     );
     return resultado;
@@ -165,8 +166,8 @@ export default class AuthService {
 
   async refreshToken(payload: any): Promise<any> {
     const { refreshToken } = payload;
-    const { ip, userAgent } = this.ctx(payload);
-    return await this.sesionService.refreshSession(refreshToken, userAgent, ip);
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
+    return await this.sesionService.refreshSession(refreshToken, userAgent, ip, channelHeader);
   }
 
   async logout(payload: any, identity: any): Promise<any> {

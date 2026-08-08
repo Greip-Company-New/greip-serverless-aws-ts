@@ -16,6 +16,11 @@ info:
       `Authorization: Bearer <accessToken>` (JWT RS256). El `createdBy`/`updatedBy` de los
       productos se toma del `sub` (userId) del token, y el `tenantId` (aislamiento por empresa)
       se toma del `tenantId` incluido en el token — nunca del request del cliente.
+    - **Multicanal**: el canal se envía por header `Canal` (valores: `AppWeb`, `AppMovil`,
+      `Chatbot`, `Whatsapp`, `Web`, `Portal`, `App`). El access token se genera con el canal
+      del login y **solo es válido para ese canal**: si un token emitido para `AppMovil` se
+      usa con header `Canal: AppWeb`, se rechaza con 401. El canal se persiste en los
+      atributos de auditoría `createdByChannel` / `updatedByChannel` de cada entidad.
 
     **Envoltorio de respuestas:**
     - En **éxito** (200/201) el body es el objeto `Response` directamente:
@@ -1510,6 +1515,10 @@ components:
           type: string
           description: Email/userId que creó el registro (SYSTEM si fue automático).
           example: admin@greip.com.pe
+        createdByChannel:
+          type: string
+          description: Canal desde el que se creó (AppWeb, AppMovil, Chatbot, Whatsapp).
+          example: AppWeb
         createdAt:
           type: string
           format: date-time
@@ -1518,6 +1527,10 @@ components:
           type: string
           description: Email/userId de la última actualización.
           example: admin@greip.com.pe
+        updatedByChannel:
+          type: string
+          description: Canal desde el que se realizó la última actualización.
+          example: AppMovil
         updatedAt:
           type: string
           format: date-time
@@ -1760,6 +1773,10 @@ components:
           type: string
           description: Email/userId que creó el registro.
           example: admin@greip.com.pe
+        createdByChannel:
+          type: string
+          description: Canal desde el que se creó (AppWeb, AppMovil, Chatbot, Whatsapp).
+          example: AppWeb
         createdAt:
           type: string
           format: date-time
@@ -1768,6 +1785,10 @@ components:
           type: string
           description: Email/userId de la última actualización.
           example: admin@greip.com.pe
+        updatedByChannel:
+          type: string
+          description: Canal desde el que se realizó la última actualización.
+          example: AppMovil
         updatedAt:
           type: string
           format: date-time

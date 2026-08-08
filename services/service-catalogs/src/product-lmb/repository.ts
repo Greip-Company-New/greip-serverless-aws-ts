@@ -22,8 +22,10 @@ function mapProduct(row: any): Product {
     currency: row.currency,
     status: row.status,
     createdBy: row.created_by,
+    createdByChannel: row.created_by_channel,
     createdAt: row.created_at,
     updatedBy: row.updated_by,
+    updatedByChannel: row.updated_by_channel,
     updatedAt: row.updated_at
   };
 }
@@ -48,7 +50,7 @@ export class Repository {
   async createProduct(product: ProductRequest): Promise<Product> {
     const row = await db.executeOne(
       INSERT_PRODUCT_QUERY,
-      [product.tenantId ?? 1, product.name, product.description ?? null, product.price, product.currency ?? 'PEN', product.status ?? 'A', product.createdBy || 'SYSTEM']
+      [product.tenantId ?? 1, product.name, product.description ?? null, product.price, product.currency ?? 'PEN', product.status ?? 'A', product.createdBy || 'SYSTEM', product.createdByChannel || 'SYSTEM']
     );
     return mapProduct(row);
   }
@@ -56,7 +58,7 @@ export class Repository {
   async updateProduct(productId: number, product: ProductRequest, tenantId?: number): Promise<Product | null> {
     const row = await db.executeOne(
       UPDATE_PRODUCT_QUERY,
-      [productId, product.name, product.description ?? null, product.price, product.currency ?? 'PEN', product.status ?? 'A', product.createdBy || 'SYSTEM', tenantId || null]
+      [productId, product.name, product.description ?? null, product.price, product.currency ?? 'PEN', product.status ?? 'A', product.createdBy || 'SYSTEM', product.createdByChannel || 'SYSTEM', tenantId || null]
     );
     return row ? mapProduct(row) : null;
   }

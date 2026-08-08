@@ -32,12 +32,13 @@ export class SesionService {
   /**
    * Genera el par access/refresh, crea la sesion en DynamoDB y devuelve los tokens.
    */
-  async startSession(usuario: UsuarioDynamo, extras?: { permissions?: string[]; roles?: string[]; userAgent?: string; ip?: string }): Promise<ResultadoTokens> {
+  async startSession(usuario: UsuarioDynamo, extras?: { permissions?: string[]; roles?: string[]; userAgent?: string; ip?: string; channel?: string }): Promise<ResultadoTokens> {
     const tenantId = await this.resolveTenantId(usuario.tenant);
     const identidad: Identidad = {
       sub: usuario.userId,
       tenant: usuario.tenant,
       tenantId,
+      channel: extras?.channel,
       type: TOKEN_TYPE_ACCESS,
       permissions: extras?.permissions,
       roles: extras?.roles
@@ -69,7 +70,7 @@ export class SesionService {
   /**
    * Valida el refresh token y emite un nuevo par (rotacion de sesion).
    */
-  async refreshSession(refreshToken: string, userAgent?: string, ip?: string): Promise<ResultadoTokens> {
+  async refreshSession(refreshToken: string, userAgent?: string, ip?: string, channel?: string): Promise<ResultadoTokens> {
     const identidad = await verificarToken(refreshToken);
     if (identidad.type !== TOKEN_TYPE_REFRESH) {
       throw new Error('Token invalido para renovacion');
@@ -93,7 +94,7 @@ export class SesionService {
 
     const tenantId = await this.resolveTenantId(usuario.tenant);
     const accessToken = await firmarToken(
-      { sub: usuario.userId, tenant: usuario.tenant, tenantId, type: TOKEN_TYPE_ACCESS },
+      { sub: usuario.userId, tenant: usuario.tenant, tenantId, channel: channel || identidad.channel, type: TOKEN_TYPE_ACCESS },
       ACCESS_TOKEN_TTL_MIN
     );
 

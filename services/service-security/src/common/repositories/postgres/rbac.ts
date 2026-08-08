@@ -45,7 +45,9 @@ export class RbacRepository {
     return await this.db.exists(EMAIL_EXISTS_QUERY, [tenantId, email]);
   }
 
-  async createPerson(p: Omit<PersonaRow, 'id' | 'created_by' | 'created_at' | 'updated_by' | 'updated_at'>, createdBy?: string): Promise<PersonaRow> {
+  async createPerson(p: Omit<PersonaRow, 'id' | 'created_by' | 'created_at' | 'updated_by' | 'updated_at'>, createdBy?: string, channel?: string): Promise<PersonaRow> {
+    const actor = createdBy || 'SYSTEM';
+    const canal = channel || 'SYSTEM';
     const rows = await this.db.execute<PersonaRow>(CREATE_PERSON_QUERY, [
       p.tenant_id,
       p.first_name,
@@ -56,20 +58,21 @@ export class RbacRepository {
       p.email,
       p.phone,
       p.status,
-      createdBy || 'SYSTEM'
+      actor,
+      canal
     ]);
     return rows.rows[0];
   }
 
-  async createUserPersonRelation(userId: string, personId: string, tenantId: string, createdBy?: string): Promise<void> {
-    await this.db.execute(CREATE_USER_PERSON_QUERY, [userId, personId, tenantId, createdBy || 'SYSTEM']);
+  async createUserPersonRelation(userId: string, personId: string, tenantId: string, createdBy?: string, channel?: string): Promise<void> {
+    await this.db.execute(CREATE_USER_PERSON_QUERY, [userId, personId, tenantId, createdBy || 'SYSTEM', channel || 'SYSTEM']);
   }
 
   async getUserPerson(userId: string): Promise<PersonaRow | null> {
     return await this.db.executeOne<PersonaRow>(GET_USER_PERSON_QUERY, [userId]);
   }
 
-  async updatePerson(personId: string, campos: Partial<PersonaRow>, updatedBy?: string): Promise<PersonaRow | null> {
+  async updatePerson(personId: string, campos: Partial<PersonaRow>, updatedBy?: string, channel?: string): Promise<PersonaRow | null> {
     const rows = await this.db.execute<PersonaRow>(UPDATE_PERSON_QUERY, [
       personId,
       campos.first_name,
@@ -80,7 +83,8 @@ export class RbacRepository {
       campos.email,
       campos.phone,
       campos.status,
-      updatedBy || 'SYSTEM'
+      updatedBy || 'SYSTEM',
+      channel || 'SYSTEM'
     ]);
     return rows.rows[0] || null;
   }
@@ -90,8 +94,8 @@ export class RbacRepository {
     return result.rows;
   }
 
-  async createRole(rol: Omit<RolRow, 'id' | 'created_by' | 'created_at' | 'updated_by' | 'updated_at'>, createdBy?: string): Promise<RolRow> {
-    const rows = await this.db.execute<RolRow>(CREATE_ROLE_QUERY, [rol.tenant_id, rol.code, rol.name, rol.description, rol.status, createdBy || 'SYSTEM']);
+  async createRole(rol: Omit<RolRow, 'id' | 'created_by' | 'created_at' | 'updated_by' | 'updated_at'>, createdBy?: string, channel?: string): Promise<RolRow> {
+    const rows = await this.db.execute<RolRow>(CREATE_ROLE_QUERY, [rol.tenant_id, rol.code, rol.name, rol.description, rol.status, createdBy || 'SYSTEM', channel || 'SYSTEM']);
     return rows.rows[0];
   }
 
@@ -104,16 +108,16 @@ export class RbacRepository {
     return result.rows;
   }
 
-  async assignRole(userId: string, roleId: string, createdBy?: string): Promise<void> {
-    await this.db.execute(ASSIGN_ROLE_QUERY, [userId, roleId, createdBy || 'SYSTEM']);
+  async assignRole(userId: string, roleId: string, createdBy?: string, channel?: string): Promise<void> {
+    await this.db.execute(ASSIGN_ROLE_QUERY, [userId, roleId, createdBy || 'SYSTEM', channel || 'SYSTEM']);
   }
 
   async removeRole(userId: string, roleId: string): Promise<void> {
     await this.db.execute(REMOVE_ROLE_QUERY, [userId, roleId]);
   }
 
-  async linkPermissionsToRole(roleId: string, tenantId: string, createdBy?: string): Promise<void> {
-    await this.db.execute(LINK_PERMISSIONS_TO_ROLE_QUERY, [roleId, tenantId, createdBy || 'SYSTEM']);
+  async linkPermissionsToRole(roleId: string, tenantId: string, createdBy?: string, channel?: string): Promise<void> {
+    await this.db.execute(LINK_PERMISSIONS_TO_ROLE_QUERY, [roleId, tenantId, createdBy || 'SYSTEM', channel || 'SYSTEM']);
   }
 
   async getUserRoles(userId: string): Promise<RolRow[]> {

@@ -47,10 +47,12 @@ export default class Service {
         try {
             const repository = new Repository();
             const tenantId = tenantIdFromIdentity(payload);
+            const channel = payload.identity?.channel || 'SYSTEM';
             const product = await repository.createProduct({
                 ...payload,
                 tenantId,
-                createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM'
+                createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM',
+                createdByChannel: channel
             });
             return ResponseFactory.created(product, `Producto creado exitosamente (id=${product.productId})`);
         } catch (err: any) {
@@ -64,10 +66,12 @@ export default class Service {
         try {
             const repository = new Repository();
             const tenantId = tenantIdFromIdentity(payload);
+            const channel = payload.identity?.channel || 'SYSTEM';
             const product = await repository.updateProduct(productId, {
                 ...payload,
                 tenantId,
-                createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM'
+                createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM',
+                createdByChannel: channel
             }, tenantId);
             if (!product) {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });

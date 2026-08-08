@@ -21,8 +21,10 @@ CREATE TABLE IF NOT EXISTS greip.tenant (
     name        VARCHAR(200) NOT NULL,
     status      CHAR(1)      NOT NULL DEFAULT 'A' CHECK (status IN ('A', 'I')),
     created_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    created_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
     updated_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    updated_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     updated_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
     CONSTRAINT uq_tenant_code UNIQUE (code)
 );
@@ -56,8 +58,10 @@ CREATE TABLE IF NOT EXISTS greip.role (
     description VARCHAR(500),
     status      CHAR(1)     NOT NULL DEFAULT 'A' CHECK (status IN ('A', 'I')),
     created_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    created_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    updated_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_role_tenant_code UNIQUE (tenant_id, code)
 );
@@ -71,8 +75,10 @@ CREATE TABLE IF NOT EXISTS greip.permission (
     description VARCHAR(500),
     status      CHAR(1)     NOT NULL DEFAULT 'A' CHECK (status IN ('A', 'I')),
     created_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    created_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    updated_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_permission_tenant_code UNIQUE (tenant_id, code)
 );
@@ -86,8 +92,10 @@ CREATE TABLE IF NOT EXISTS greip.user_group (
     description VARCHAR(500),
     status      CHAR(1)     NOT NULL DEFAULT 'A' CHECK (status IN ('A', 'I')),
     created_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    created_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    updated_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_user_group_tenant_code UNIQUE (tenant_id, code)
 );
@@ -98,8 +106,10 @@ CREATE TABLE IF NOT EXISTS greip.user_person (
     person_id   INT  NOT NULL REFERENCES greip.person (id),
     tenant_id   INT  NOT NULL REFERENCES greip.tenant (id),
     created_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    created_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    updated_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -109,8 +119,10 @@ CREATE TABLE IF NOT EXISTS greip.user_role (
     role_id     INT  NOT NULL REFERENCES greip.role (id) ON DELETE CASCADE,
     tenant_id   INT  NOT NULL REFERENCES greip.tenant (id),
     created_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    created_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    updated_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT pk_user_role PRIMARY KEY (user_id, role_id)
 );
@@ -133,8 +145,10 @@ CREATE TABLE IF NOT EXISTS greip.user_group_member (
     group_id    INT  NOT NULL REFERENCES greip.user_group (id) ON DELETE CASCADE,
     tenant_id   INT  NOT NULL REFERENCES greip.tenant (id),
     created_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    created_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    updated_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT pk_user_group_member PRIMARY KEY (user_id, group_id)
 );
@@ -145,8 +159,10 @@ CREATE TABLE IF NOT EXISTS greip.user_group_role (
     role_id     INT NOT NULL REFERENCES greip.role (id) ON DELETE CASCADE,
     tenant_id   INT NOT NULL REFERENCES greip.tenant (id),
     created_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    created_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  VARCHAR(200) NOT NULL DEFAULT 'SYSTEM',
+    updated_by_channel VARCHAR(50)  NOT NULL DEFAULT 'SYSTEM',
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT pk_user_group_role PRIMARY KEY (group_id, role_id)
 );
@@ -175,119 +191,85 @@ CREATE INDEX IF NOT EXISTS idx_person_email        ON greip.person (tenant_id, e
 CREATE INDEX IF NOT EXISTS idx_user_role_user      ON greip.user_role (user_id);
 CREATE INDEX IF NOT EXISTS idx_group_member_user   ON greip.user_group_member (user_id);
 
--- =========================================================
 -- MIGRACION idempotente para entornos ya existentes (DEV).
--- Agrega auditoria (created_by / updated_by) y tenant_id a las
--- tablas que no las tenian. Se puede re-ejecutar sin romper nada.
--- =========================================================
+-- Agrega auditoria (created_by / updated_by), canal (created_by_channel /
+-- updated_by_channel) y tenant_id a las tablas que no las tenian.
 
 -- tenant
-ALTER TABLE greip.tenant
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.tenant
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.tenant ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.tenant ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.tenant ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.tenant ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
 
 -- person
-ALTER TABLE greip.person
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.person
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.person ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.person ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.person ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.person ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
 
 -- role
-ALTER TABLE greip.role
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.role
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.role ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.role ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.role ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.role ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
 
--- permission (solo faltaba updated_at/auditoria)
-ALTER TABLE greip.permission
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
-ALTER TABLE greip.permission
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.permission
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+-- permission
+ALTER TABLE greip.permission ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE greip.permission ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.permission ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.permission ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.permission ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
 
 -- user_group
-ALTER TABLE greip.user_group
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.user_group
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
 
 -- user_person
-ALTER TABLE greip.user_person
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.user_person
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.user_person
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE greip.user_person ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_person ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_person ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_person ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_person ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
 -- user_role
-ALTER TABLE greip.user_role
-    ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES greip.tenant (id);
-ALTER TABLE greip.user_role
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.user_role
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.user_role
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE greip.user_role ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES greip.tenant (id);
+ALTER TABLE greip.user_role ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_role ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_role ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_role ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_role ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
 -- role_permission
-ALTER TABLE greip.role_permission
-    ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES greip.tenant (id);
-ALTER TABLE greip.role_permission
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.role_permission
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.role_permission
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE greip.role_permission ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES greip.tenant (id);
+ALTER TABLE greip.role_permission ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.role_permission ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.role_permission ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.role_permission ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.role_permission ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
 -- user_group_member
-ALTER TABLE greip.user_group_member
-    ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES greip.tenant (id);
-ALTER TABLE greip.user_group_member
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.user_group_member
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.user_group_member
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE greip.user_group_member ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES greip.tenant (id);
+ALTER TABLE greip.user_group_member ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group_member ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group_member ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group_member ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group_member ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
 -- user_group_role
-ALTER TABLE greip.user_group_role
-    ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES greip.tenant (id);
-ALTER TABLE greip.user_group_role
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.user_group_role
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.user_group_role
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE greip.user_group_role ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES greip.tenant (id);
+ALTER TABLE greip.user_group_role ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group_role ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group_role ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group_role ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.user_group_role ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
 -- password_policy
-ALTER TABLE greip.password_policy
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-ALTER TABLE greip.password_policy
-    ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
-
--- Backfill de tenant_id en tablas N:N a partir de las tablas padre
--- (solo filas existentes; las nuevas se crean con tenant explicito).
-UPDATE greip.user_role ur
-   SET tenant_id = r.tenant_id
-  FROM greip.role r
- WHERE ur.role_id = r.id AND ur.tenant_id IS NULL;
-
-UPDATE greip.role_permission rp
-   SET tenant_id = r.tenant_id
-  FROM greip.role r
- WHERE rp.role_id = r.id AND rp.tenant_id IS NULL;
-
-UPDATE greip.user_group_member ugm
-   SET tenant_id = g.tenant_id
-  FROM greip.user_group g
- WHERE ugm.group_id = g.id AND ugm.tenant_id IS NULL;
-
-UPDATE greip.user_group_role ugr
-   SET tenant_id = g.tenant_id
-  FROM greip.user_group g
- WHERE ugr.group_id = g.id AND ugr.tenant_id IS NULL;
+ALTER TABLE greip.password_policy ADD COLUMN IF NOT EXISTS created_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.password_policy ADD COLUMN IF NOT EXISTS created_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.password_policy ADD COLUMN IF NOT EXISTS updated_by VARCHAR(200) NOT NULL DEFAULT 'SYSTEM';
+ALTER TABLE greip.password_policy ADD COLUMN IF NOT EXISTS updated_by_channel VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
 
 -- Indices por tenant de las tablas N:N (se crean despues de la migracion,
 -- cuando las columnas tenant_id ya existen en entornos preexistentes).
@@ -331,8 +313,10 @@ COMMENT ON COLUMN greip.tenant.code IS 'Codigo unico del tenant';
 COMMENT ON COLUMN greip.tenant.name IS 'Nombre comercial del tenant';
 COMMENT ON COLUMN greip.tenant.status IS 'Estado del tenant (A=activo, I=inactivo)';
 COMMENT ON COLUMN greip.tenant.created_by IS 'Usuario/email que creo el registro (SYSTEM si fue automatico)';
+COMMENT ON COLUMN greip.tenant.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.tenant.created_at IS 'Fecha de creacion del registro';
 COMMENT ON COLUMN greip.tenant.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.tenant.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.tenant.updated_at IS 'Fecha de ultima actualizacion del registro';
 
 COMMENT ON TABLE greip.person IS 'Datos maestros de la persona vinculada a un usuario';
@@ -346,8 +330,10 @@ COMMENT ON COLUMN greip.person.email IS 'Correo electronico de la persona';
 COMMENT ON COLUMN greip.person.phone IS 'Telefono de contacto de la persona';
 COMMENT ON COLUMN greip.person.status IS 'Estado de la persona (A=activo, I=inactivo)';
 COMMENT ON COLUMN greip.person.created_by IS 'Usuario/email que creo el registro';
+COMMENT ON COLUMN greip.person.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.person.created_at IS 'Fecha de creacion del registro';
 COMMENT ON COLUMN greip.person.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.person.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.person.updated_at IS 'Fecha de ultima actualizacion del registro';
 
 COMMENT ON TABLE greip.role IS 'Rol del RBAC (conjunto de permisos)';
@@ -357,8 +343,10 @@ COMMENT ON COLUMN greip.role.name IS 'Nombre descriptivo del rol';
 COMMENT ON COLUMN greip.role.description IS 'Descripcion del rol';
 COMMENT ON COLUMN greip.role.status IS 'Estado del rol (A=activo, I=inactivo)';
 COMMENT ON COLUMN greip.role.created_by IS 'Usuario/email que creo el registro';
+COMMENT ON COLUMN greip.role.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.role.created_at IS 'Fecha de creacion del registro';
 COMMENT ON COLUMN greip.role.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.role.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.role.updated_at IS 'Fecha de ultima actualizacion del registro';
 
 COMMENT ON TABLE greip.permission IS 'Permiso individual del RBAC (accion sobre un recurso)';
@@ -368,8 +356,10 @@ COMMENT ON COLUMN greip.permission.name IS 'Nombre descriptivo del permiso';
 COMMENT ON COLUMN greip.permission.description IS 'Descripcion del permiso';
 COMMENT ON COLUMN greip.permission.status IS 'Estado del permiso (A=activo, I=inactivo)';
 COMMENT ON COLUMN greip.permission.created_by IS 'Usuario/email que creo el registro';
+COMMENT ON COLUMN greip.permission.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.permission.created_at IS 'Fecha de creacion del registro';
 COMMENT ON COLUMN greip.permission.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.permission.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.permission.updated_at IS 'Fecha de ultima actualizacion del registro';
 
 COMMENT ON TABLE greip.user_group IS 'Grupo de usuarios (permite otorgar roles en lote)';
@@ -379,8 +369,10 @@ COMMENT ON COLUMN greip.user_group.name IS 'Nombre descriptivo del grupo';
 COMMENT ON COLUMN greip.user_group.description IS 'Descripcion del grupo';
 COMMENT ON COLUMN greip.user_group.status IS 'Estado del grupo (A=activo, I=inactivo)';
 COMMENT ON COLUMN greip.user_group.created_by IS 'Usuario/email que creo el registro';
+COMMENT ON COLUMN greip.user_group.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.user_group.created_at IS 'Fecha de creacion del registro';
 COMMENT ON COLUMN greip.user_group.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.user_group.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.user_group.updated_at IS 'Fecha de ultima actualizacion del registro';
 
 COMMENT ON TABLE greip.user_person IS 'Vincula el userId (DynamoDB) con la persona (PostgreSQL)';
@@ -388,8 +380,10 @@ COMMENT ON COLUMN greip.user_person.user_id IS 'UUID del usuario en DynamoDB (TB
 COMMENT ON COLUMN greip.user_person.person_id IS 'Id de la persona en la tabla greip.person';
 COMMENT ON COLUMN greip.user_person.tenant_id IS 'Tenant al que pertenece el vinculo';
 COMMENT ON COLUMN greip.user_person.created_by IS 'Usuario/email que creo el registro';
+COMMENT ON COLUMN greip.user_person.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.user_person.created_at IS 'Fecha de creacion del vinculo';
 COMMENT ON COLUMN greip.user_person.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.user_person.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.user_person.updated_at IS 'Fecha de ultima actualizacion del vinculo';
 
 COMMENT ON TABLE greip.user_role IS 'Roles asignados directamente a un usuario';
@@ -397,8 +391,10 @@ COMMENT ON COLUMN greip.user_role.user_id IS 'UUID del usuario (DynamoDB)';
 COMMENT ON COLUMN greip.user_role.role_id IS 'Id del rol asignado';
 COMMENT ON COLUMN greip.user_role.tenant_id IS 'Tenant del vinculo usuario-rol';
 COMMENT ON COLUMN greip.user_role.created_by IS 'Usuario/email que creo el registro';
+COMMENT ON COLUMN greip.user_role.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.user_role.created_at IS 'Fecha de asignacion del rol';
 COMMENT ON COLUMN greip.user_role.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.user_role.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.user_role.updated_at IS 'Fecha de ultima actualizacion del vinculo';
 
 COMMENT ON TABLE greip.role_permission IS 'Permisos otorgados a un rol';
@@ -406,8 +402,10 @@ COMMENT ON COLUMN greip.role_permission.role_id IS 'Id del rol';
 COMMENT ON COLUMN greip.role_permission.permission_id IS 'Id del permiso otorgado';
 COMMENT ON COLUMN greip.role_permission.tenant_id IS 'Tenant del vinculo rol-permiso';
 COMMENT ON COLUMN greip.role_permission.created_by IS 'Usuario/email que creo el registro';
+COMMENT ON COLUMN greip.role_permission.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.role_permission.created_at IS 'Fecha de vinculacion permiso-rol';
 COMMENT ON COLUMN greip.role_permission.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.role_permission.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.role_permission.updated_at IS 'Fecha de ultima actualizacion del vinculo';
 
 COMMENT ON TABLE greip.user_group_member IS 'Miembros de un grupo de usuarios';
@@ -415,8 +413,10 @@ COMMENT ON COLUMN greip.user_group_member.user_id IS 'UUID del usuario miembro (
 COMMENT ON COLUMN greip.user_group_member.group_id IS 'Id del grupo';
 COMMENT ON COLUMN greip.user_group_member.tenant_id IS 'Tenant del vinculo usuario-grupo';
 COMMENT ON COLUMN greip.user_group_member.created_by IS 'Usuario/email que creo el registro';
+COMMENT ON COLUMN greip.user_group_member.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.user_group_member.created_at IS 'Fecha de incorporacion al grupo';
 COMMENT ON COLUMN greip.user_group_member.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.user_group_member.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.user_group_member.updated_at IS 'Fecha de ultima actualizacion del vinculo';
 
 COMMENT ON TABLE greip.user_group_role IS 'Roles otorgados via un grupo de usuarios';
@@ -424,8 +424,10 @@ COMMENT ON COLUMN greip.user_group_role.group_id IS 'Id del grupo';
 COMMENT ON COLUMN greip.user_group_role.role_id IS 'Id del rol otorgado via el grupo';
 COMMENT ON COLUMN greip.user_group_role.tenant_id IS 'Tenant del vinculo grupo-rol';
 COMMENT ON COLUMN greip.user_group_role.created_by IS 'Usuario/email que creo el registro';
+COMMENT ON COLUMN greip.user_group_role.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.user_group_role.created_at IS 'Fecha de vinculacion rol-grupo';
 COMMENT ON COLUMN greip.user_group_role.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.user_group_role.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.user_group_role.updated_at IS 'Fecha de ultima actualizacion del vinculo';
 
 COMMENT ON TABLE greip.password_policy IS 'Politica de contrasenas por tenant';
@@ -439,6 +441,8 @@ COMMENT ON COLUMN greip.password_policy.require_special IS 'Exige al menos un ca
 COMMENT ON COLUMN greip.password_policy.max_age_days IS 'Dias de vigencia maxima de la contrasena';
 COMMENT ON COLUMN greip.password_policy.max_reuse IS 'Cuantas contrasenas recientes no se pueden reutilizar';
 COMMENT ON COLUMN greip.password_policy.created_by IS 'Usuario/email que creo el registro';
+COMMENT ON COLUMN greip.password_policy.created_by_channel IS 'Canal desde el que se creo el registro (AppWeb, AppMovil, Chatbot, Whatsapp)';
 COMMENT ON COLUMN greip.password_policy.created_at IS 'Fecha de creacion del registro';
 COMMENT ON COLUMN greip.password_policy.updated_by IS 'Usuario/email de la ultima actualizacion';
+COMMENT ON COLUMN greip.password_policy.updated_by_channel IS 'Canal desde el que se realizo la ultima actualizacion';
 COMMENT ON COLUMN greip.password_policy.updated_at IS 'Fecha de ultima actualizacion del registro';

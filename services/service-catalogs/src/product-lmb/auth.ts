@@ -35,6 +35,13 @@ export default function AuthMiddleware(options: { exclude?: string[] } = {}) {
         throw err;
       }
 
+      const requestCanal = headers['Canal'] || headers['canal'] || '';
+      if (identity.channel && requestCanal && identity.channel !== requestCanal) {
+        const err = new Error(JSON.stringify({ success: false, statusCode: 401, message: `Token generado para el canal ${identity.channel}, no valido para ${requestCanal}` }));
+        (err as any).httpStatus = 401;
+        throw err;
+      }
+
       handler.event.payload = { ...payload, identity };
     }
   };

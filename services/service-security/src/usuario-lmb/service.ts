@@ -15,13 +15,14 @@ export default class UsuarioLmbService {
     return {
       requestId: payload?.requestId,
       ip: headers['X-Forwarded-For'] || headers['x-forwarded-for'] || headers['Source-Ip'] || '',
-      userAgent: headers['User-Agent'] || headers['user-agent'] || ''
+      userAgent: headers['User-Agent'] || headers['user-agent'] || '',
+      channel: headers['Canal'] || headers['canal'] || ''
     };
   }
 
   async createUser(payload: any, identity: any): Promise<any> {
-    const { ip, userAgent } = this.ctx(payload);
-    const resultado = await this.usuarioService.createUser({ ...payload, createdBy: identity?.sub || 'SYSTEM' });
+    const { ip, userAgent, channel } = this.ctx(payload);
+    const resultado = await this.usuarioService.createUser({ ...payload, createdBy: identity?.sub || 'SYSTEM', channel });
     await registerAudit(
       {
         action: AUDIT_EVENTS.USER_CREATED,
@@ -39,11 +40,11 @@ export default class UsuarioLmbService {
 
   async updateUser(payload: any, identity: any): Promise<any> {
     const { userId, headers, requestId, ...campos } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel } = this.ctx(payload);
     if (!userId) {
       throw new Error('userId es obligatorio');
     }
-    const usuario = await this.usuarioService.updateUser(userId, campos, identity?.sub);
+    const usuario = await this.usuarioService.updateUser(userId, { ...campos, channel }, identity?.sub);
     await registerAudit(
       {
         action: AUDIT_EVENTS.USER_UPDATED,
@@ -61,11 +62,11 @@ export default class UsuarioLmbService {
 
   async deleteUser(payload: any, identity: any): Promise<any> {
     const { userId } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel } = this.ctx(payload);
     if (!userId) {
       throw new Error('userId es obligatorio');
     }
-    await this.usuarioService.deleteUser(userId, identity?.sub);
+    await this.usuarioService.deleteUser(userId, identity?.sub, channel);
     await registerAudit(
       {
         action: AUDIT_EVENTS.USER_DELETED,
@@ -73,7 +74,8 @@ export default class UsuarioLmbService {
         entityId: userId,
         actor: identity?.sub,
         sourceIp: ip,
-        userAgent
+        userAgent,
+        detail: { canal: channel }
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
@@ -97,13 +99,13 @@ export default class UsuarioLmbService {
 
   async assignRoles(payload: any, identity: any): Promise<any> {
     const { userId, roles } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel } = this.ctx(payload);
     if (!userId || !Array.isArray(roles) || roles.length === 0) {
       throw new Error('userId y roles son obligatorios');
     }
     const asignados = [];
     for (const roleId of roles) {
-      await this.usuarioService.assignRole(userId, roleId, identity?.sub);
+      await this.usuarioService.assignRole(userId, roleId, identity?.sub, channel);
       asignados.push(roleId);
     }
     await registerAudit(
@@ -114,7 +116,7 @@ export default class UsuarioLmbService {
         actor: identity?.sub,
         sourceIp: ip,
         userAgent,
-        detail: { roles: asignados }
+        detail: { roles: asignados, canal: channel }
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
@@ -153,8 +155,8 @@ export default class UsuarioLmbService {
   }
 
   async createRole(payload: any, identity: any): Promise<any> {
-    const { ip, userAgent } = this.ctx(payload);
-    const rol = await this.usuarioService.createRole(payload, identity?.sub);
+    const { ip, userAgent, channel } = this.ctx(payload);
+    const rol = await this.usuarioService.createRole(payload, identity?.sub, channel);
     await registerAudit(
       {
         action: AUDIT_EVENTS.ROLE_CREATED,
@@ -163,7 +165,7 @@ export default class UsuarioLmbService {
         actor: identity?.sub,
         sourceIp: ip,
         userAgent,
-        detail: { code: rol.code }
+        detail: { code: rol.code, canal: channel }
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );

@@ -28,6 +28,7 @@ export interface TokenIdentity {
   sub: string;
   tenant: string;
   tenantId?: number;
+  channel?: string;
   type: string;
   exp?: number;
   permissions?: string[];

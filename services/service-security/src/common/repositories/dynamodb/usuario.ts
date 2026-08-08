@@ -163,8 +163,10 @@ export function mapPublicUser(usuario: UsuarioDynamo): any {
       email: { active: usuario.mfa?.email?.active || false, verified: usuario.mfa?.email?.verified || false }
     },
     createdBy: usuario.createdBy,
+    createdByChannel: usuario.createdByChannel,
     createdAt: usuario.createdAt,
     updatedBy: usuario.updatedBy,
+    updatedByChannel: usuario.updatedByChannel,
     updatedAt: usuario.updatedAt
   };
 }

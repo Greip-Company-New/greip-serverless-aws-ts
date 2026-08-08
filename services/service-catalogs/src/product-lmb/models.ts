@@ -7,8 +7,10 @@ export interface Product {
   currency: string;
   status: string;
   createdBy: string;
+  createdByChannel?: string;
   createdAt?: string;
   updatedBy: string;
+  updatedByChannel?: string;
   updatedAt?: string;
 }
 
@@ -20,6 +22,7 @@ export interface ProductRequest {
   currency?: string;
   status?: string;
   createdBy?: string;
+  createdByChannel?: string;
 }
 
 export interface ListProductsRequest {

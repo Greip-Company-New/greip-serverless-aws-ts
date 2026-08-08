@@ -132,7 +132,11 @@ export const CODIGO_TELEFONO_PAIS = {
 export const CANALES = [
   'Web',
   'Portal',
-  'App'
+  'App',
+  'AppWeb',
+  'AppMovil',
+  'Chatbot',
+  'Whatsapp'
 ]
 
 export const CRYPTO_LEVEL = {
