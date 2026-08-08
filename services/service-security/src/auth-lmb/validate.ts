@@ -13,6 +13,12 @@ export default class Validate {
     }).xor('email', 'documentType');
 
     await this.validar(schema, payload);
+
+    const headers = payload?.headers || {};
+    const headerChannel = headers['channel'] || headers['Channel'] || headers['Canal'] || headers['canal'] || '';
+    if (!headerChannel) {
+      throw ['Header channel es obligatorio'];
+    }
   }
 
   static async verifyMfa(payload: any): Promise<void> {

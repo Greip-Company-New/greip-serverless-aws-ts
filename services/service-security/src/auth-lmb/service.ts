@@ -40,7 +40,7 @@ export default class AuthService {
       requestId: payload?.requestId,
       ip: headers['X-Forwarded-For'] || headers['x-forwarded-for'] || headers['Source-Ip'] || '',
       userAgent: headers['User-Agent'] || headers['user-agent'] || '',
-      channel: headers['Canal'] || headers['canal'] || ''
+      channel: headers['channel'] || headers['Channel'] || headers['Canal'] || headers['canal'] || ''
     };
   }
 
@@ -52,6 +52,10 @@ export default class AuthService {
   async login(payload: any): Promise<any> {
     const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
     const { email, documentType, documentNumber, password, channel } = payload;
+
+    if (!channelHeader) {
+      throw new Error('Header channel es obligatorio');
+    }
 
     const usuario = email
       ? await this.usuarioRepo.getByEmail(email)

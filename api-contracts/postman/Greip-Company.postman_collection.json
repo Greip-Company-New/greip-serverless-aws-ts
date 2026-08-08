@@ -2,7 +2,7 @@
   "info": {
     "name": "GREIP COMPANY - API",
     "_postman_id": "a3f5e8c1-9b2d-4f6a-8c3e-1d2b4a5c6d7e",
-    "description": "Colección Postman de las APIs de GREIP COMPANY (DEV).\n\nServicios:\n- service-security (base path /srv-security): autenticación (auth), usuarios + RBAC (user/role/permission) y auditoría (audit).\n- service-catalogs (base path /srv-catalogs): catálogo de productos (product).\n- service-cross (base path /srv-cross): notificaciones (email/SMS) y cifrado de data de tokens.\n\nAutenticación:\n- Todos los endpoints requieren header `x-api-key` (variable por servicio).\n- Los endpoints protegidos requieren `Authorization: Bearer <token>` (variable token) y permisos RBAC.\n- **Multicanal**: todos los requests llevan el header `Canal` (variable `canal`). El access token se genera con el canal del login y solo es válido para ese canal. Valores: AppWeb, AppMovil, Chatbot, Whatsapp.\n\nEl request 'Login' guarda automáticamente el access token en `token`; 'Create user' guarda `userId`; 'Create role' guarda `roleId`; 'Create product' guarda `productId`.",
+    "description": "Colección Postman de las APIs de GREIP COMPANY (DEV).\n\nServicios:\n- service-security (base path /srv-security): autenticación (auth), usuarios + RBAC (user/role/permission) y auditoría (audit).\n- service-catalogs (base path /srv-catalogs): catálogo de productos (product).\n- service-cross (base path /srv-cross): notificaciones (email/SMS) y cifrado de data de tokens.\n\nAutenticación:\n- Todos los endpoints requieren header `x-api-key` (variable por servicio).\n- Los endpoints protegidos requieren `Authorization: Bearer <token>` (variable token) y permisos RBAC.\n- **Multicanal**: todos los requests llevan el header `channel` (variable `canal`). El access token se genera con el header `channel` del login y solo es válido para ese canal. Valores: AppWeb, AppMovil, Chatbot, Whatsapp.\n\nEl request 'Login' guarda automáticamente el access token en `token`; 'Create user' guarda `userId`; 'Create role' guarda `roleId`; 'Create product' guarda `productId`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -57,7 +57,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -110,7 +110,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -147,7 +147,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -183,7 +183,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -223,7 +223,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -264,7 +264,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -301,7 +301,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -343,7 +343,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -397,7 +397,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -428,7 +428,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -460,7 +460,7 @@
             "method": "PUT",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -500,7 +500,7 @@
             "method": "DELETE",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -532,7 +532,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -573,7 +573,7 @@
             "method": "DELETE",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -607,7 +607,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -640,7 +640,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -671,7 +671,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -725,7 +725,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -761,7 +761,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -792,7 +792,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -829,7 +829,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -860,7 +860,7 @@
             "method": "GET",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -892,7 +892,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -946,7 +946,7 @@
             "method": "PUT",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -986,7 +986,7 @@
             "method": "DELETE",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -1023,7 +1023,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -1059,7 +1059,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -1100,7 +1100,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {
@@ -1137,7 +1137,7 @@
             "method": "POST",
             "header": [
               {
-                "key": "Canal",
+                "key": "channel",
                 "value": "{{canal}}"
               },
               {

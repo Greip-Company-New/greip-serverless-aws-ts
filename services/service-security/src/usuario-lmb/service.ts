@@ -16,7 +16,7 @@ export default class UsuarioLmbService {
       requestId: payload?.requestId,
       ip: headers['X-Forwarded-For'] || headers['x-forwarded-for'] || headers['Source-Ip'] || '',
       userAgent: headers['User-Agent'] || headers['user-agent'] || '',
-      channel: headers['Canal'] || headers['canal'] || ''
+      channel: headers['channel'] || headers['Channel'] || headers['Canal'] || headers['canal'] || ''
     };
   }
 

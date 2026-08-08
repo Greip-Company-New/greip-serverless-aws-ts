@@ -3,20 +3,26 @@ import UsuarioValidate from './usuario-lmb/validate';
 import AuditValidate from './audit-lmb/validate';
 
 describe('auth-lmb/validate', () => {
+  const headers = { channel: 'AppWeb' };
+
   it('acepta login por email', async () => {
-    await expect(AuthValidate.login({ email: 'a@greip.com.pe', password: 'x' })).resolves.toBeUndefined();
+    await expect(AuthValidate.login({ email: 'a@greip.com.pe', password: 'x', headers })).resolves.toBeUndefined();
   });
 
   it('acepta login por documento (sin email)', async () => {
-    await expect(AuthValidate.login({ documentType: 'D', documentNumber: '12345678', password: 'x' })).resolves.toBeUndefined();
+    await expect(AuthValidate.login({ documentType: 'D', documentNumber: '12345678', password: 'x', headers })).resolves.toBeUndefined();
   });
 
   it('rechaza login con email y documento a la vez', async () => {
-    await expect(AuthValidate.login({ email: 'a@greip.com.pe', documentType: 'D', documentNumber: '123', password: 'x' })).rejects.toBeTruthy();
+    await expect(AuthValidate.login({ email: 'a@greip.com.pe', documentType: 'D', documentNumber: '123', password: 'x', headers })).rejects.toBeTruthy();
   });
 
   it('rechaza login sin password', async () => {
-    await expect(AuthValidate.login({ email: 'a@greip.com.pe' })).rejects.toBeTruthy();
+    await expect(AuthValidate.login({ email: 'a@greip.com.pe', headers })).rejects.toBeTruthy();
+  });
+
+  it('rechaza login sin header channel', async () => {
+    await expect(AuthValidate.login({ email: 'a@greip.com.pe', password: 'x' })).rejects.toBeTruthy();
   });
 
   it('valida verifyMfa con code de 6 digitos', async () => {

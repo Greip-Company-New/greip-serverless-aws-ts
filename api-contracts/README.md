@@ -22,7 +22,7 @@ Contrato OpenAPI 3.0.3 y colección Postman de las APIs de GREIP COMPANY (DEV).
 
 3. **Configurar variables** de la colección:
    - `api-server` → `https://apidev.greip.com.pe`
-   - `canal` → canal con el que pruebas (valores: `AppWeb`, `AppMovil`, `Chatbot`, `Whatsapp`). Se envía en el header `Canal` de todos los requests y el token solo es válido para ese canal.
+   - `canal` → canal con el que pruebas (valores: `AppWeb`, `AppMovil`, `Chatbot`, `Whatsapp`). Se envía en el header `channel` de todos los requests (obligatorio) y el token solo es válido para ese canal.
    - `ak-service-security` → API Key de `service-security`
    - `ak-service-catalogs` → API Key de `service-catalogs`
    - `ak-service-cross` → API Key de `service-cross`

@@ -16,11 +16,12 @@ info:
       `Authorization: Bearer <accessToken>` (JWT RS256). El `createdBy`/`updatedBy` de los
       productos se toma del `sub` (userId) del token, y el `tenantId` (aislamiento por empresa)
       se toma del `tenantId` incluido en el token — nunca del request del cliente.
-    - **Multicanal**: el canal se envía por header `Canal` (valores: `AppWeb`, `AppMovil`,
-      `Chatbot`, `Whatsapp`, `Web`, `Portal`, `App`). El access token se genera con el canal
-      del login y **solo es válido para ese canal**: si un token emitido para `AppMovil` se
-      usa con header `Canal: AppWeb`, se rechaza con 401. El canal se persiste en los
-      atributos de auditoría `createdByChannel` / `updatedByChannel` de cada entidad.
+    - **Multicanal**: el canal es **obligatorio** y se envía por header `channel`
+      (valores: `AppWeb`, `AppMovil`, `Chatbot`, `Whatsapp`, `Web`, `Portal`, `App`).
+      El access token se genera con el canal del login y **solo es válido para ese canal**:
+      si un token emitido para `AppMovil` se usa con header `channel: AppWeb`, se rechaza
+      con 401. El canal se persiste en los atributos de auditoría `createdByChannel` /
+      `updatedByChannel` de cada entidad.
 
     **Envoltorio de respuestas:**
     - En **éxito** (200/201) el body es el objeto `Response` directamente:
@@ -195,6 +196,8 @@ paths:
       tags: [Auth]
       summary: "Cerrar sesión (opcional: revocar todas las sesiones)"
       operationId: authLogout
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       requestBody:
         required: true
         content:
@@ -228,6 +231,8 @@ paths:
       tags: [Auth]
       summary: Cambiar contraseña (requiere sesión activa)
       operationId: authChangePassword
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       requestBody:
         required: true
         content:
@@ -331,6 +336,8 @@ paths:
       tags: [User]
       summary: Crear usuario (perfil en DynamoDB + persona en PostgreSQL)
       operationId: userCreate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       requestBody:
         required: true
         content:
@@ -357,6 +364,7 @@ paths:
       summary: Listar usuarios (paginado y filtros)
       operationId: userList
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
         - name: status
@@ -395,6 +403,7 @@ paths:
       summary: Obtener usuario con persona, roles y permisos
       operationId: userGet
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
       responses:
         "200":
@@ -416,6 +425,7 @@ paths:
       summary: Actualizar datos del usuario
       operationId: userUpdate
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
       requestBody:
         required: true
@@ -443,6 +453,7 @@ paths:
       summary: Eliminar usuario (borrado lógico, status=I)
       operationId: userDelete
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
       responses:
         "200":
@@ -464,6 +475,7 @@ paths:
       summary: Asignar roles a un usuario
       operationId: userAssignRoles
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
       requestBody:
         required: true
@@ -500,6 +512,7 @@ paths:
       summary: Quitar un rol de un usuario
       operationId: userRemoveRole
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
         - $ref: "#/components/parameters/RoleId"
       responses:
@@ -522,6 +535,7 @@ paths:
       summary: Obtener permisos efectivos de un usuario
       operationId: userGetPermissions
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
       responses:
         "200":
@@ -540,6 +554,8 @@ paths:
       tags: [User]
       summary: Listar roles
       operationId: roleList
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       responses:
         "200":
           description: Lista de roles (`data` es un array de `Role`).
@@ -555,6 +571,8 @@ paths:
       tags: [User]
       summary: Crear rol
       operationId: roleCreate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       requestBody:
         required: true
         content:
@@ -594,6 +612,8 @@ paths:
       tags: [User]
       summary: Listar permisos disponibles
       operationId: permissionList
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       responses:
         "200":
           description: Lista de permisos (`data` es un array de `Permission`).
@@ -615,6 +635,7 @@ paths:
       summary: Listar eventos de auditoría (paginado y filtros)
       operationId: auditList
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
         - name: dateFrom
@@ -666,6 +687,7 @@ paths:
       summary: Obtener un evento de auditoría por su sort key
       operationId: auditGet
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - name: sk
           in: path
           required: true
@@ -701,6 +723,7 @@ paths:
         - ApiKeyAuth: []
         - BearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
         - name: status
@@ -732,6 +755,8 @@ paths:
       security:
         - ApiKeyAuth: []
         - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       requestBody:
         required: true
         content:
@@ -757,6 +782,7 @@ paths:
         - ApiKeyAuth: []
         - BearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/ProductId"
       responses:
         "200":
@@ -779,6 +805,7 @@ paths:
         - ApiKeyAuth: []
         - BearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/ProductId"
       requestBody:
         required: true
@@ -807,6 +834,7 @@ paths:
         - ApiKeyAuth: []
         - BearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/ProductId"
       responses:
         "200":
@@ -946,6 +974,14 @@ components:
       description: Access token JWT RS256 emitido por /auth/login.
 
   parameters:
+    Channel:
+      name: channel
+      in: header
+      required: true
+      schema:
+        type: string
+        enum: [AppWeb, AppMovil, Chatbot, Whatsapp, Web, Portal, App]
+      description: Canal desde el que se consume la API. Obligatorio; el token solo es válido para el canal con el que fue generado.
     Page:
       name: page
       in: query
