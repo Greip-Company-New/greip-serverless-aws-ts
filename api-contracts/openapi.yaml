@@ -923,7 +923,7 @@ paths:
                   example: 35424e37412d6d5e15b5559ff4e661...
       responses:
         "200":
-          description: 'Data descifrada (`data: { decrypted, algorithm }`). `decrypted` es el JSON original en texto.'
+          description: 'Data descifrada (`data: { decrypted, algorithm }`). `decrypted` es el JSON parseado si el texto era un objeto, o el string original en caso contrario.'
           content:
             application/json:
               schema:
@@ -1990,8 +1990,11 @@ components:
               required: [decrypted, algorithm]
               properties:
                 decrypted:
-                  type: string
-                  description: Data descifrada (el JSON original en texto).
+                  description: 'Data descifrada: objeto JSON si el texto descifrado era un objeto, o el string original en caso contrario.'
+                  example:
+                    sub: 550e8400-e29b-41d4-a716-446655440000
+                    tenant: GREIP
+                    roles: [ADMIN]
                 algorithm:
                   type: string
                   description: Algoritmo usado (aes-256-cbc).

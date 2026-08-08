@@ -39,7 +39,7 @@ export default class Service {
         throw new Error(result.message || 'Decryption failed');
       }
       const data: TokenCryptoResult = {
-        decrypted: result.decrypted,
+        decrypted: parseDecrypted(result.decrypted),
         algorithm: config.algorithm,
       };
       return ResponseFactory.success(data, MESSAGES_SUCCESS.PROCESS_SUCCESS);
@@ -49,4 +49,12 @@ export default class Service {
     }
   }
 
+}
+
+function parseDecrypted(value: string): any {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
 }
