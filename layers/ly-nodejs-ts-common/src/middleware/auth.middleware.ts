@@ -53,8 +53,8 @@ export default function AuthMiddleware(options: AuthMiddlewareOptions = {}) {
         throw err;
       }
       if (!CANALES.includes(requestChannel)) {
-        const err = new Error(JSON.stringify({ success: false, statusCode: 400, message: `Canal ${requestChannel} no permitido. Validos: ${CANALES.join(', ')}` }));
-        (err as any).httpStatus = 400;
+        const err = new Error(JSON.stringify({ success: false, statusCode: 401, message: `Token no autorizado para este canal ${requestChannel}` }));
+        (err as any).httpStatus = 401;
         throw err;
       }
       if (identity.channel && identity.channel !== requestChannel) {

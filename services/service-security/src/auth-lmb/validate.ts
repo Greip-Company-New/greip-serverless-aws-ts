@@ -21,7 +21,9 @@ export default class Validate {
       throw ['Header channel es obligatorio'];
     }
     if (!CANALES.includes(headerChannel)) {
-      throw [`Canal ${headerChannel} no permitido. Validos: ${CANALES.join(', ')}`];
+      const err: any = new Error(`Token no autorizado para este canal ${headerChannel}`);
+      err.httpStatus = 401;
+      throw err;
     }
   }
 
@@ -103,7 +105,9 @@ export default class Validate {
       throw ['Header channel es obligatorio'];
     }
     if (!CANALES.includes(headerChannel)) {
-      throw [`Canal ${headerChannel} no permitido. Validos: ${CANALES.join(', ')}`];
+      const err: any = new Error(`Token no autorizado para este canal ${headerChannel}`);
+      err.httpStatus = 401;
+      throw err;
     }
   }
 
