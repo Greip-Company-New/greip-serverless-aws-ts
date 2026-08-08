@@ -102,7 +102,7 @@ export class SesionService {
       accessToken,
       refreshToken: nuevoRefresh,
       expiresAt: Date.now() + ACCESS_TOKEN_TTL_MIN * 60 * 1000,
-      user: mapPublicUser(usuario)
+      user: mapPublicUser(usuario, tenantId)
     };
   }
 

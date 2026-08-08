@@ -43,6 +43,9 @@ CREATE INDEX IF NOT EXISTS idx_entity_change_log_lookup ON greip.entity_change_l
 CREATE INDEX IF NOT EXISTS idx_entity_change_log_tenant ON greip.entity_change_log (tenant_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_entity_change_log_action ON greip.entity_change_log (action, created_at);
 
+-- Indice por usuario: consulta de todos los movimientos de un userId.
+CREATE INDEX IF NOT EXISTS idx_entity_change_log_user ON greip.entity_change_log (user_id, tenant_id, created_at);
+
 -- El indice por (entity, entity_key) queda cubierto por el compuesto: se elimina
 -- en entornos que ya lo tuvieran.
 DROP INDEX IF EXISTS greip.idx_entity_change_log_entity;

@@ -701,6 +701,62 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /entity-audit/user/{userId}:
+    get:
+      tags: [Audit]
+      summary: Consultar todos los movimientos de un usuario (por userId)
+      operationId: entityAuditListByUser
+      description: |
+        Devuelve el histórico de todos los cambios/eventos en los que un usuario
+        fue actor (userId). Ordenado de más reciente a más antiguo.
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: UUID del usuario cuyo historial se consulta.
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Tenant (empresa) al que pertenece el usuario.
+          example: 1
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtro por acción/evento (USER_CREATED, PRODUCT_CREATED, USER_LOGIN, ...).
+        - name: entity
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtro por entidad (product, user, role, ...).
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: |
+            Lista paginada de movimientos del usuario. `data` es un array de `EntityChangeLog`
+            y `metadata.pagination` contiene la paginación.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityChangeLogListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   # =========================================================
   # PRODUCT (service-catalogs)
   # =========================================================
@@ -1564,6 +1620,10 @@ components:
           type: string
           description: Código del tenant (empresa) al que pertenece.
           example: GREIP
+        tenantId:
+          type: integer
+          description: Identificador numérico del tenant en PostgreSQL (usado para consultar auditoría).
+          example: 1
         email:
           type: string
           format: email

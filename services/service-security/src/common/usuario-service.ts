@@ -187,15 +187,17 @@ export class UsuarioService {
     if (!usuario) {
       throw new Error('Usuario no encontrado');
     }
+    const tenant = await this.tenantDefault();
     const person = await this.rbac.getUserPerson(userId);
     const roles = await this.rbac.getUserRoles(userId);
     const permissions = await this.rbac.getUserPermissions(userId);
-    return { user: mapPublicUser(usuario), person, roles, permissions };
+    return { user: mapPublicUser(usuario, tenant.id), person, roles, permissions };
   }
 
   async listUsers(page: number, pageSize: number, filtros?: any): Promise<{ data: any[]; total: number }> {
+    const tenant = await this.tenantDefault();
     const resultado = await this.usuarioRepo.list(page, pageSize, filtros);
-    return { data: resultado.data.map(mapPublicUser), total: resultado.total };
+    return { data: resultado.data.map((u) => mapPublicUser(u, tenant.id)), total: resultado.total };
   }
 
   async assignRole(userId: string, roleId: string, actor?: string, channel?: string): Promise<void> {

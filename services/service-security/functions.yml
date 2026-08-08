@@ -262,6 +262,16 @@ ENTITY_AUDIT_LMB:
             template:
               application/json: ${file(config/serverless/request/src/entity-audit-lmb/listChanges.vm)}
           response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /entity-audit/user/{userId}
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/entity-audit-lmb/listByUser.vm)}
+          response: ${file(config/serverless/http-response.yml)}
 
 # Procesador de la cola SQS de auditoria: persiste en PostgreSQL los mensajes
 # encolados por Helpers.registerEntityChange (entity_change_log).

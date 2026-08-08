@@ -813,6 +813,54 @@
               ]
             }
           }
+        },
+        {
+          "name": "Get user movements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/entity-audit/user/{{userId}}?tenantId=1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "entity-audit",
+                "user",
+                "{{userId}}"
+              ],
+              "query": [
+                {
+                  "key": "tenantId",
+                  "value": "1"
+                },
+                {
+                  "key": "action",
+                  "value": "",
+                  "description": "Filtro por accion/evento"
+                },
+                {
+                  "key": "entity",
+                  "value": "",
+                  "description": "Filtro por entidad"
+                }
+              ]
+            }
+          }
         }
       ]
     },

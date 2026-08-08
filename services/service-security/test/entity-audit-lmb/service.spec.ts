@@ -66,4 +66,36 @@ describe('entity-audit-lmb/service', () => {
 
     expect(mockExecute.mock.calls[0][1]).toEqual(['product', '5', 1, null, '181.65.19.105', 'curl']);
   });
+
+  it('listByUser consulta los movimientos de un userId con filtros', async () => {
+    mockExecute.mockImplementation((sql: string) => {
+      if (sql.includes('COUNT')) {
+        return Promise.resolve({ rows: [{ total: 2 }] });
+      }
+      return Promise.resolve({ rows: [
+        {
+          id: '30', entity: 'product', entity_key: '10', tenant_id: 1,
+          change_type: 'CREATE', action: 'PRODUCT_CREATED', status: 'A', user_id: 'user-1',
+          user_first_name: 'Juan', user_father_last_name: 'Perez', user_mother_last_name: null,
+          channel: 'AppWeb', source_ip: null, user_agent: null,
+          changes: {}, created_at: '2026-08-08T00:15:45.119Z'
+        }
+      ] });
+    });
+
+    const result = await Service.listByUser({ userId: 'user-1', tenantId: 1, action: 'PRODUCT_CREATED', entity: 'product' });
+
+    expect(result.total).toBe(2);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].user_id).toBe('user-1');
+    expect(result.data[0].action).toBe('PRODUCT_CREATED');
+
+    // COUNT: [userId, tenantId, action, entity]
+    expect(mockExecute.mock.calls[0][1]).toEqual(['user-1', 1, 'PRODUCT_CREATED', 'product']);
+    // Listado: [userId, tenantId, action, entity, limit, offset]
+    const listParams = mockExecute.mock.calls[1][1];
+    expect(listParams.slice(0, 4)).toEqual(['user-1', 1, 'PRODUCT_CREATED', 'product']);
+    expect(listParams[4]).toBe(10);
+    expect(listParams[5]).toBe(0);
+  });
 });
