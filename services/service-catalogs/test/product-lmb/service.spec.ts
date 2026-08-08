@@ -4,12 +4,15 @@ import { Repository } from '../../src/product-lmb/repository';
 describe('Service product-lmb', () => {
   const producto = {
     productId: 1,
+    tenantId: 1,
     name: 'Consultoria TI',
     description: null,
     price: 1500.5,
     currency: 'PEN',
     status: 'A',
+    createdBy: 'SYSTEM',
     createdAt: '2026-08-07T12:00:00.000Z',
+    updatedBy: 'SYSTEM',
     updatedAt: '2026-08-07T12:00:00.000Z'
   };
 
@@ -43,7 +46,7 @@ describe('Service product-lmb', () => {
 
       await Service.listProducts({ page: 1, pageSize: 500 });
 
-      expect(spy).toHaveBeenCalledWith(1, 100, undefined, undefined);
+      expect(spy).toHaveBeenCalledWith(1, 100, undefined, undefined, undefined);
     });
   });
 

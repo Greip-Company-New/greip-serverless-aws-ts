@@ -36,7 +36,7 @@ export class SesionService {
     const accessToken = await firmarToken(identidad, ACCESS_TOKEN_TTL_MIN);
     const refreshToken = await this.generateRefreshToken(usuario.userId, usuario.tenant);
 
-    await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(refreshToken), extras?.userAgent, extras?.ip);
+    await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(refreshToken), extras?.userAgent, extras?.ip, usuario.email);
 
     return {
       accessToken,
@@ -79,7 +79,7 @@ export class SesionService {
     await this.sesionRepo.delete(identidad.tenant, identidad.sub, hash);
 
     const nuevoRefresh = await this.generateRefreshToken(usuario.userId, usuario.tenant);
-    await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(nuevoRefresh), userAgent || sesion.userAgent, ip || sesion.ip);
+    await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(nuevoRefresh), userAgent || sesion.userAgent, ip || sesion.ip, usuario.email);
 
     const accessToken = await firmarToken(
       { sub: usuario.userId, tenant: usuario.tenant, type: TOKEN_TYPE_ACCESS },

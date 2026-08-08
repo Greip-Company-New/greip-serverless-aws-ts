@@ -126,24 +126,27 @@ export class MfaService {
     return true;
   }
 
-  async registerTotpFactor(tenant: string, userId: string): Promise<{ secret: string; otpauthUrl: string }> {
+  async registerTotpFactor(tenant: string, userId: string, createdBy?: string): Promise<{ secret: string; otpauthUrl: string }> {
     const secreto = generateTotpSecret();
-    const factor = {
+    await this.repo.saveFactor({
       pk: this.repo.mfaPk(tenant, userId),
       sk: 'TOTP',
+      tenant,
+      userId,
       channel: 'TOTP',
       active: true,
       verified: false,
       secret: secreto,
+      createdBy: createdBy || 'SYSTEM',
       createdAt: new Date().toISOString(),
+      updatedBy: createdBy || 'SYSTEM',
       updatedAt: new Date().toISOString()
-    };
-    await this.repo.saveFactor(factor);
+    });
     const otpauthUrl = `otpauth://totp/GREIP:${userId}?secret=${secreto}&issuer=GREIP&algorithm=SHA1&digits=6&period=30`;
     return { secret: secreto, otpauthUrl };
   }
 
-  async verifyAndActivateFactor(tenant: string, userId: string, channel: string, code: string): Promise<boolean> {
+  async verifyAndActivateFactor(tenant: string, userId: string, channel: string, code: string, actor?: string): Promise<boolean> {
     if (channel === 'TOTP') {
       const secreto = await this.factorSecret(tenant, userId);
       if (!secreto || !verifyTotp(code, secreto)) {
@@ -152,11 +155,15 @@ export class MfaService {
       await this.repo.saveFactor({
         pk: this.repo.mfaPk(tenant, userId),
         sk: 'TOTP',
+        tenant,
+        userId,
         channel: 'TOTP',
         active: true,
         verified: true,
         secret: secreto,
+        createdBy: actor || 'SYSTEM',
         createdAt: new Date().toISOString(),
+        updatedBy: actor || 'SYSTEM',
         updatedAt: new Date().toISOString()
       });
       return true;

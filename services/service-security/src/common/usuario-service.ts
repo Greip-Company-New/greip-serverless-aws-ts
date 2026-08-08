@@ -76,6 +76,7 @@ export class UsuarioService {
 
     const userId = crypto.randomUUID();
     const ahora = new Date().toISOString();
+    const createdBy = data.createdBy || data.email || 'SYSTEM';
     const persona = await this.rbac.createPerson({
       tenant_id: tenant.id,
       first_name: data.firstName,
@@ -86,8 +87,8 @@ export class UsuarioService {
       email,
       phone: data.phone || null,
       status: STATUS_ACTIVE
-    });
-    await this.rbac.createUserPersonRelation(userId, String(persona.id), tenant.id);
+    }, createdBy);
+    await this.rbac.createUserPersonRelation(userId, String(persona.id), tenant.id, createdBy);
 
     const usuario: UsuarioDynamo = {
       pk: this.usuarioRepo.userPk(userId),
@@ -113,7 +114,9 @@ export class UsuarioService {
         sms: { active: false, verified: false },
         email: { active: false, verified: false }
       },
+      createdBy,
       createdAt: ahora,
+      updatedBy: createdBy,
       updatedAt: ahora
     };
 
@@ -121,7 +124,7 @@ export class UsuarioService {
     return { user: mapPublicUser(usuario), person: persona, generatedPassword };
   }
 
-  async updateUser(userId: string, campos: any): Promise<any> {
+  async updateUser(userId: string, campos: any, actor?: string): Promise<any> {
     const tenant = await this.tenantDefault();
     const actual = await this.usuarioRepo.getById(userId);
     if (!actual) {
@@ -146,7 +149,7 @@ export class UsuarioService {
       }
     }
 
-    const actualizado = await this.usuarioRepo.actualizar(userId, campos);
+    const actualizado = await this.usuarioRepo.actualizar(userId, { ...campos, updatedBy: actor || campos.updatedBy || actual.updatedBy });
     if (!actualizado) {
       throw new Error('Usuario no encontrado');
     }
@@ -177,20 +180,20 @@ export class UsuarioService {
     return { data: resultado.data.map(mapPublicUser), total: resultado.total };
   }
 
-  async assignRole(userId: string, roleId: string): Promise<void> {
+  async assignRole(userId: string, roleId: string, actor?: string): Promise<void> {
     const tenant = await this.tenantDefault();
     const rol = await this.rbac.getRole(roleId, tenant.id);
     if (!rol) {
       throw new Error('Rol no encontrado');
     }
-    await this.rbac.assignRole(userId, roleId);
+    await this.rbac.assignRole(userId, roleId, actor);
   }
 
   async removeRole(userId: string, roleId: string): Promise<void> {
     await this.rbac.removeRole(userId, roleId);
   }
 
-  async createRole(data: any): Promise<any> {
+  async createRole(data: any, actor?: string): Promise<any> {
     const tenant = await this.tenantDefault();
     if (!data.code || !data.name) {
       throw new Error('code y name son obligatorios para el rol');
@@ -201,7 +204,7 @@ export class UsuarioService {
       name: data.name,
       description: data.description || null,
       status: STATUS_ACTIVE
-    });
+    }, actor);
   }
 
   async listRoles(): Promise<any[]> {

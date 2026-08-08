@@ -21,7 +21,7 @@ export default class UsuarioLmbService {
 
   async createUser(payload: any, identity: any): Promise<any> {
     const { ip, userAgent } = this.ctx(payload);
-    const resultado = await this.usuarioService.createUser(payload);
+    const resultado = await this.usuarioService.createUser({ ...payload, createdBy: identity?.sub || payload.email });
     await registerAudit(
       {
         action: AUDIT_EVENTS.USER_CREATED,
@@ -43,7 +43,7 @@ export default class UsuarioLmbService {
     if (!userId) {
       throw new Error('userId es obligatorio');
     }
-    const usuario = await this.usuarioService.updateUser(userId, campos);
+    const usuario = await this.usuarioService.updateUser(userId, campos, identity?.sub);
     await registerAudit(
       {
         action: AUDIT_EVENTS.USER_UPDATED,
@@ -103,7 +103,7 @@ export default class UsuarioLmbService {
     }
     const asignados = [];
     for (const roleId of roles) {
-      await this.usuarioService.assignRole(userId, roleId);
+      await this.usuarioService.assignRole(userId, roleId, identity?.sub);
       asignados.push(roleId);
     }
     await registerAudit(
@@ -154,7 +154,7 @@ export default class UsuarioLmbService {
 
   async createRole(payload: any, identity: any): Promise<any> {
     const { ip, userAgent } = this.ctx(payload);
-    const rol = await this.usuarioService.createRole(payload);
+    const rol = await this.usuarioService.createRole(payload, identity?.sub);
     await registerAudit(
       {
         action: AUDIT_EVENTS.ROLE_CREATED,

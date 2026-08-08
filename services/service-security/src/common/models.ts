@@ -21,7 +21,9 @@ export interface UsuarioDynamo {
   lockedUntil?: string | null;
   passwordChangedAt?: string | null;
   mfa: Record<string, any>; // configuracion de factores { totp, sms, email }
+  createdBy: string;       // email/userId que creo el registro
   createdAt: string;
+  updatedBy: string;       // email/userId de la ultima actualizacion
   updatedAt: string;
   lastActionAt?: string;
   lastRequestId?: string;
@@ -41,7 +43,9 @@ export interface UsuarioPublico {
   phone?: string;
   status: string;
   mfa: Record<string, any>;
+  createdBy: string;
   createdAt: string;
+  updatedBy: string;
   updatedAt: string;
 }
 
@@ -49,10 +53,14 @@ export interface UsuarioPublico {
 export interface SesionDynamo {
   pk: string;              // TENANT#<tenant>#USER#<userId>
   sk: string;              // SESSION#<hashRefreshToken>
+  tenant: string;          // GREIP
+  userId: string;          // UUID
   refreshTokenHash: string;
   userAgent?: string;
   ip?: string;
+  createdBy: string;       // email/userId que inicio la sesion
   createdAt: string;
+  updatedBy: string;       // email/userId de la ultima actualizacion
   updatedAt: string;
   expiresAt: number;       // TTL epoch seg
 }
@@ -70,6 +78,7 @@ export interface AuditoriaEvento {
   sourceIp?: string;
   userAgent?: string;
   detail?: any;
+  createdBy: string;       // email/userId que origino el evento
   date: string;            // ISO
   expiresAt: number;       // TTL epoch seg
 }
@@ -78,24 +87,31 @@ export interface AuditoriaEvento {
 export interface FactorMfaDynamo {
   pk: string;              // TENANT#<tenant>#USER#<userId>
   sk: string;              // TOTP | SMS | EMAIL | CHALLENGE#<uuid>
+  tenant: string;          // GREIP
+  userId: string;          // UUID
   channel: string;
   active: boolean;
   verified: boolean;
   secret?: string;         // TOTP: secret base32
   phone?: string;          // SMS: destino
   email?: string;          // EMAIL: destino
+  createdBy: string;       // email/userId que registro el factor
   createdAt: string;
+  updatedBy: string;       // email/userId de la ultima actualizacion
   updatedAt: string;
 }
 
 export interface DesafioDynamo {
   pk: string;              // TENANT#<tenant>#USER#<userId>
   sk: string;              // CHALLENGE#<uuid>
+  tenant: string;          // GREIP
+  userId: string;          // UUID
   type: string;            // MFA | RESET
   channel: string;         // SMS | EMAIL | TOTP
   codeHash: string;        // sha256 del codigo OTP
   attempts: number;
   expiresAt: string;       // ISO
+  createdBy: string;       // email/userId que genero el desafio
   createdAt: string;
   ttl: number;             // TTL epoch seg
 }
@@ -106,6 +122,10 @@ export interface TenantRow {
   code: string;
   name: string;
   status: string;
+  created_by: string;
+  created_at: string;
+  updated_by: string;
+  updated_at: string;
 }
 
 export interface PersonaRow {
@@ -119,6 +139,10 @@ export interface PersonaRow {
   email: string;
   phone: string | null;
   status: string;
+  created_by: string;
+  created_at: string;
+  updated_by: string;
+  updated_at: string;
 }
 
 export interface RolRow {
@@ -128,6 +152,10 @@ export interface RolRow {
   name: string;
   description: string | null;
   status: string;
+  created_by: string;
+  created_at: string;
+  updated_by: string;
+  updated_at: string;
 }
 
 export interface PermisoRow {
@@ -137,6 +165,10 @@ export interface PermisoRow {
   name: string;
   description: string | null;
   status: string;
+  created_by: string;
+  created_at: string;
+  updated_by: string;
+  updated_at: string;
 }
 
 export interface PoliticaContrasena {

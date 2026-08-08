@@ -33,6 +33,7 @@ export function createEvent(params: AuditoriaParams, tenant: string): Omit<Audit
     sourceIp: params.sourceIp,
     userAgent: params.userAgent,
     detail: params.detail,
+    createdBy: params.actor || 'SYSTEM',
     date: new Date().toISOString(),
     expiresAt: Math.floor(Date.now() / 1000) + AUDIT_RETENTION_DAYS * 24 * 3600
   };

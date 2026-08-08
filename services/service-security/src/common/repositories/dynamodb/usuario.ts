@@ -162,7 +162,9 @@ export function mapPublicUser(usuario: UsuarioDynamo): any {
       sms: { active: usuario.mfa?.sms?.active || false, verified: usuario.mfa?.sms?.verified || false },
       email: { active: usuario.mfa?.email?.active || false, verified: usuario.mfa?.email?.verified || false }
     },
+    createdBy: usuario.createdBy,
     createdAt: usuario.createdAt,
+    updatedBy: usuario.updatedBy,
     updatedAt: usuario.updatedAt
   };
 }

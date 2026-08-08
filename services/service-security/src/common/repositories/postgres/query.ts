@@ -23,48 +23,57 @@ SELECT 1 AS found
 
 export const CREATE_PERSON_QUERY = `
 INSERT INTO greip.person (tenant_id, first_name, father_last_name, mother_last_name,
-                          document_type, document_number, email, phone, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                          document_type, document_number, email, phone, status,
+                          created_by, updated_by)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
 RETURNING id, tenant_id, first_name, father_last_name, mother_last_name,
-          document_type, document_number, email, phone, status`;
+          document_type, document_number, email, phone, status,
+          created_by, created_at, updated_by, updated_at`;
 
 export const CREATE_USER_PERSON_QUERY = `
-INSERT INTO greip.user_person (user_id, person_id, tenant_id)
-VALUES ($1, $2, $3)`;
+INSERT INTO greip.user_person (user_id, person_id, tenant_id, created_by, updated_by)
+VALUES ($1, $2, $3, $4, $4)`;
 
 export const GET_USER_PERSON_QUERY = `
 SELECT up.user_id, up.person_id, up.tenant_id, p.first_name, p.father_last_name,
        p.mother_last_name, p.document_type, p.document_number, p.email,
-       p.phone, p.status
+       p.phone, p.status, p.created_by, p.created_at, p.updated_by, p.updated_at
   FROM greip.user_person up
   JOIN greip.person p ON p.id = up.person_id
  WHERE up.user_id = $1`;
 
 export const LIST_ROLES_QUERY = `
-SELECT r.id, r.code, r.name, r.description, r.status
+SELECT r.id, r.code, r.name, r.description, r.status,
+       r.created_by, r.created_at, r.updated_by, r.updated_at
   FROM greip.role r
  WHERE r.tenant_id = $1
  ORDER BY r.name`;
 
 export const CREATE_ROLE_QUERY = `
-INSERT INTO greip.role (tenant_id, code, name, description, status)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, code, name, description, status`;
+INSERT INTO greip.role (tenant_id, code, name, description, status,
+                        created_by, updated_by)
+VALUES ($1, $2, $3, $4, $5, $6, $6)
+RETURNING id, code, name, description, status,
+          created_by, created_at, updated_by, updated_at`;
 
 export const GET_ROLE_QUERY = `
-SELECT r.id, r.code, r.name, r.description, r.status
+SELECT r.id, r.code, r.name, r.description, r.status,
+       r.created_by, r.created_at, r.updated_by, r.updated_at
   FROM greip.role r
  WHERE r.id = $1 AND r.tenant_id = $2`;
 
 export const LIST_PERMISSIONS_QUERY = `
-SELECT p.id, p.code, p.name, p.description, p.status
+SELECT p.id, p.code, p.name, p.description, p.status,
+       p.created_by, p.created_at, p.updated_by, p.updated_at
   FROM greip.permission p
  WHERE p.tenant_id = $1 AND p.status = 'A'
  ORDER BY p.code`;
 
 export const ASSIGN_ROLE_QUERY = `
-INSERT INTO greip.user_role (user_id, role_id)
-VALUES ($1, $2)
+INSERT INTO greip.user_role (user_id, role_id, tenant_id, created_by, updated_by)
+SELECT $1, $2, r.tenant_id, $3, $3
+  FROM greip.role r
+ WHERE r.id = $2
 ON CONFLICT (user_id, role_id) DO NOTHING`;
 
 export const REMOVE_ROLE_QUERY = `
@@ -72,8 +81,8 @@ DELETE FROM greip.user_role
  WHERE user_id = $1 AND role_id = $2`;
 
 export const LINK_PERMISSIONS_TO_ROLE_QUERY = `
-INSERT INTO greip.role_permission (role_id, permission_id)
-SELECT r.id, p.id
+INSERT INTO greip.role_permission (role_id, permission_id, tenant_id, created_by, updated_by)
+SELECT r.id, p.id, r.tenant_id, $3, $3
   FROM greip.role r
   JOIN greip.permission p ON p.tenant_id = r.tenant_id
  WHERE r.id = $1 AND r.tenant_id = $2 AND p.status = 'A'
@@ -112,7 +121,8 @@ SELECT DISTINCT p.code
 
 export const LIST_USER_PERSONS_QUERY = `
 SELECT up.user_id, p.first_name, p.father_last_name, p.mother_last_name,
-       p.document_type, p.document_number, p.email, p.phone, p.status
+       p.document_type, p.document_number, p.email, p.phone, p.status,
+       p.created_by, p.created_at, p.updated_by, p.updated_at
   FROM greip.user_person up
   JOIN greip.person p ON p.id = up.person_id
  WHERE up.tenant_id = $1

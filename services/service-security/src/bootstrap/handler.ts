@@ -36,7 +36,8 @@ async function ensureAdminUser(
       documentNumber,
       firstName,
       fatherLastName,
-      password
+      password,
+      createdBy: 'SYSTEM'
     });
     user = await usuarioRepo.getByEmail(email);
     created = true;
@@ -75,8 +76,8 @@ export async function handler(_event: any = {}): Promise<any> {
       name: ADMIN_ROLE_NAME,
       description: 'Rol administrador con todos los permisos',
       status: 'A'
-    });
-    await rbac.linkPermissionsToRole(String(adminRole.id), String(tenant.id));
+    }, 'SYSTEM');
+    await rbac.linkPermissionsToRole(String(adminRole.id), String(tenant.id), 'SYSTEM');
     console.log(`[bootstrap] rol ADMIN creado (id=${adminRole.id}) con todos los permisos`);
   } else {
     console.log(`[bootstrap] rol ADMIN ya existia (id=${adminRole.id})`);

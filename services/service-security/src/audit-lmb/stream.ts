@@ -73,6 +73,7 @@ export async function handler(event: DynamoDBStreamEvent): Promise<void> {
         documentNumber: user.documentNumber,
         status: user.status
       },
+      createdBy: user.email || 'SYSTEM',
       date,
       expiresAt: ahoraSeg + AUDIT_RETENTION_DAYS * 24 * 3600
     });

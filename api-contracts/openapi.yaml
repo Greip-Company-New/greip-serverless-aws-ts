@@ -695,6 +695,11 @@ paths:
           schema:
             type: string
           description: Filtro por nombre (ILIKE parcial)
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+          description: Filtro por tenant (empresa)
       responses:
         "200":
           description: |
@@ -1364,10 +1369,18 @@ components:
               $ref: "#/components/schemas/MfaFactor"
             email:
               $ref: "#/components/schemas/MfaFactor"
+        createdBy:
+          type: string
+          description: Email/userId que creó el registro (SYSTEM si fue automático).
+          example: admin@greip.com.pe
         createdAt:
           type: string
           format: date-time
           description: Fecha/hora de creación del registro.
+        updatedBy:
+          type: string
+          description: Email/userId de la última actualización.
+          example: admin@greip.com.pe
         updatedAt:
           type: string
           format: date-time
@@ -1420,6 +1433,22 @@ components:
         status:
           type: string
           description: Estado de la persona (A=activo, I=inactivo).
+        created_by:
+          type: string
+          description: Email/userId que creó el registro (SYSTEM si fue automático).
+          example: admin@greip.com.pe
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de creación del registro.
+        updated_by:
+          type: string
+          description: Email/userId de la última actualización.
+          example: admin@greip.com.pe
+        updated_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de la última actualización.
 
     Role:
       type: object
@@ -1445,6 +1474,22 @@ components:
         status:
           type: string
           description: Estado del rol (A=activo, I=inactivo).
+        created_by:
+          type: string
+          description: Email/userId que creó el registro.
+          example: admin@greip.com.pe
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de creación del registro.
+        updated_by:
+          type: string
+          description: Email/userId de la última actualización.
+          example: admin@greip.com.pe
+        updated_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de la última actualización.
 
     Permission:
       type: object
@@ -1470,6 +1515,22 @@ components:
         status:
           type: string
           description: Estado del permiso (A=activo, I=inactivo).
+        created_by:
+          type: string
+          description: Email/userId que creó el registro.
+          example: admin@greip.com.pe
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de creación del registro.
+        updated_by:
+          type: string
+          description: Email/userId de la última actualización.
+          example: admin@greip.com.pe
+        updated_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de la última actualización.
 
     AuditEvent:
       type: object
@@ -1517,6 +1578,10 @@ components:
           type: object
           nullable: true
           description: Detalles adicionales del evento (varía por acción).
+        createdBy:
+          type: string
+          description: Email/userId que originó el evento.
+          example: admin@greip.com.pe
         date:
           type: string
           format: date-time
@@ -1532,6 +1597,9 @@ components:
         productId:
           type: integer
           description: Identificador único del producto.
+        tenantId:
+          type: integer
+          description: Identificador del tenant (empresa) al que pertenece.
         name:
           type: string
           description: Nombre del producto.
@@ -1551,10 +1619,18 @@ components:
           type: string
           description: Estado del producto (A=activo, I=inactivo).
           enum: [A, I]
+        createdBy:
+          type: string
+          description: Email/userId que creó el registro.
+          example: admin@greip.com.pe
         createdAt:
           type: string
           format: date-time
           description: Fecha/hora de creación del registro.
+        updatedBy:
+          type: string
+          description: Email/userId de la última actualización.
+          example: admin@greip.com.pe
         updatedAt:
           type: string
           format: date-time
@@ -1636,6 +1712,13 @@ components:
       type: object
       required: [name, price]
       properties:
+        tenantId:
+          type: integer
+          description: Identificador del tenant (empresa) al que pertenece el producto.
+        createdBy:
+          type: string
+          description: Email/userId del solicitante (auditoría).
+          example: admin@greip.com.pe
         name:
           type: string
           description: Nombre del producto.

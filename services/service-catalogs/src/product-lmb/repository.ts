@@ -15,19 +15,22 @@ const db = new PostgresDatabaseService(process.env.PG_SECRET_DB || 'Greip/postgr
 function mapProduct(row: any): Product {
   return {
     productId: Number(row.id),
+    tenantId: Number(row.tenant_id),
     name: row.name,
     description: row.description,
     price: Number(row.price),
     currency: row.currency,
     status: row.status,
+    createdBy: row.created_by,
     createdAt: row.created_at,
+    updatedBy: row.updated_by,
     updatedAt: row.updated_at
   };
 }
 
 export class Repository {
-  async listProducts(page: number, pageSize: number, status?: string, name?: string): Promise<{ data: Product[]; total: number }> {
-    const params: any[] = [status || null, name || null];
+  async listProducts(page: number, pageSize: number, status?: string, name?: string, tenantId?: number): Promise<{ data: Product[]; total: number }> {
+    const params: any[] = [tenantId || null, status || null, name || null];
     const result = await db.paginate<Product>(
       LIST_PRODUCTS_QUERY,
       LIST_PRODUCTS_COUNT_QUERY,
@@ -45,7 +48,7 @@ export class Repository {
   async createProduct(product: ProductRequest): Promise<Product> {
     const row = await db.executeOne(
       INSERT_PRODUCT_QUERY,
-      [product.name, product.description ?? null, product.price, product.currency ?? 'PEN', product.status ?? 'A']
+      [product.tenantId ?? 1, product.name, product.description ?? null, product.price, product.currency ?? 'PEN', product.status ?? 'A', product.createdBy || 'SYSTEM']
     );
     return mapProduct(row);
   }
@@ -53,7 +56,7 @@ export class Repository {
   async updateProduct(productId: number, product: ProductRequest): Promise<Product | null> {
     const row = await db.executeOne(
       UPDATE_PRODUCT_QUERY,
-      [productId, product.name, product.description ?? null, product.price, product.currency ?? 'PEN', product.status ?? 'A']
+      [productId, product.name, product.description ?? null, product.price, product.currency ?? 'PEN', product.status ?? 'A', product.createdBy || 'SYSTEM']
     );
     return row ? mapProduct(row) : null;
   }

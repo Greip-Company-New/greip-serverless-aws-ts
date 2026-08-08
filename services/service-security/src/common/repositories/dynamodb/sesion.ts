@@ -22,15 +22,19 @@ export class SesionRepository {
     return `SESSION#${refreshTokenHash}`;
   }
 
-  async create(tenant: string, userId: string, refreshTokenHash: string, userAgent?: string, ip?: string): Promise<void> {
+  async create(tenant: string, userId: string, refreshTokenHash: string, userAgent?: string, ip?: string, createdBy?: string): Promise<void> {
     const ahora = new Date().toISOString();
     const sesion: SesionDynamo = {
       pk: this.sessionPk(tenant, userId),
       sk: this.sessionSk(refreshTokenHash),
+      tenant,
+      userId,
       refreshTokenHash,
       userAgent,
       ip,
+      createdBy: createdBy || 'SYSTEM',
       createdAt: ahora,
+      updatedBy: createdBy || 'SYSTEM',
       updatedAt: ahora,
       expiresAt: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS
     };

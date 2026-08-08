@@ -44,7 +44,7 @@ export class RbacRepository {
     return await this.db.exists(EMAIL_EXISTS_QUERY, [tenantId, email]);
   }
 
-  async createPerson(p: Omit<PersonaRow, 'id'>): Promise<PersonaRow> {
+  async createPerson(p: Omit<PersonaRow, 'id' | 'created_by' | 'created_at' | 'updated_by' | 'updated_at'>, createdBy?: string): Promise<PersonaRow> {
     const rows = await this.db.execute<PersonaRow>(CREATE_PERSON_QUERY, [
       p.tenant_id,
       p.first_name,
@@ -54,13 +54,14 @@ export class RbacRepository {
       p.document_number,
       p.email,
       p.phone,
-      p.status
+      p.status,
+      createdBy || 'SYSTEM'
     ]);
     return rows.rows[0];
   }
 
-  async createUserPersonRelation(userId: string, personId: string, tenantId: string): Promise<void> {
-    await this.db.execute(CREATE_USER_PERSON_QUERY, [userId, personId, tenantId]);
+  async createUserPersonRelation(userId: string, personId: string, tenantId: string, createdBy?: string): Promise<void> {
+    await this.db.execute(CREATE_USER_PERSON_QUERY, [userId, personId, tenantId, createdBy || 'SYSTEM']);
   }
 
   async getUserPerson(userId: string): Promise<PersonaRow | null> {
@@ -72,8 +73,8 @@ export class RbacRepository {
     return result.rows;
   }
 
-  async createRole(rol: Omit<RolRow, 'id'>): Promise<RolRow> {
-    const rows = await this.db.execute<RolRow>(CREATE_ROLE_QUERY, [rol.tenant_id, rol.code, rol.name, rol.description, rol.status]);
+  async createRole(rol: Omit<RolRow, 'id' | 'created_by' | 'created_at' | 'updated_by' | 'updated_at'>, createdBy?: string): Promise<RolRow> {
+    const rows = await this.db.execute<RolRow>(CREATE_ROLE_QUERY, [rol.tenant_id, rol.code, rol.name, rol.description, rol.status, createdBy || 'SYSTEM']);
     return rows.rows[0];
   }
 
@@ -86,16 +87,16 @@ export class RbacRepository {
     return result.rows;
   }
 
-  async assignRole(userId: string, roleId: string): Promise<void> {
-    await this.db.execute(ASSIGN_ROLE_QUERY, [userId, roleId]);
+  async assignRole(userId: string, roleId: string, createdBy?: string): Promise<void> {
+    await this.db.execute(ASSIGN_ROLE_QUERY, [userId, roleId, createdBy || 'SYSTEM']);
   }
 
   async removeRole(userId: string, roleId: string): Promise<void> {
     await this.db.execute(REMOVE_ROLE_QUERY, [userId, roleId]);
   }
 
-  async linkPermissionsToRole(roleId: string, tenantId: string): Promise<void> {
-    await this.db.execute(LINK_PERMISSIONS_TO_ROLE_QUERY, [roleId, tenantId]);
+  async linkPermissionsToRole(roleId: string, tenantId: string, createdBy?: string): Promise<void> {
+    await this.db.execute(LINK_PERMISSIONS_TO_ROLE_QUERY, [roleId, tenantId, createdBy || 'SYSTEM']);
   }
 
   async getUserRoles(userId: string): Promise<RolRow[]> {

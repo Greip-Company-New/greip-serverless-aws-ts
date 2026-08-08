@@ -10,7 +10,7 @@ export default class Service {
             const page = Number(payload.page) || DEFAULT_PAGE;
             const pageSize = Math.min(Number(payload.pageSize) || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
 
-            const { data, total } = await repository.listProducts(page, pageSize, payload.status, payload.name);
+            const { data, total } = await repository.listProducts(page, pageSize, payload.status, payload.name, payload.tenantId);
             return ResponseFactory.paginated(data, total, page, pageSize, 'Listado de productos obtenido exitosamente');
         } catch (err: any) {
             console.error('listProducts >>> ', err);
@@ -36,7 +36,11 @@ export default class Service {
     static async createProduct(payload: any): Promise<any> {
         try {
             const repository = new Repository();
-            const product = await repository.createProduct(payload);
+            const product = await repository.createProduct({
+                ...payload,
+                tenantId: payload.tenantId,
+                createdBy: payload.createdBy
+            });
             return ResponseFactory.created(product, `Producto creado exitosamente (id=${product.productId})`);
         } catch (err: any) {
             console.error('createProduct >>> ', err);
@@ -48,7 +52,10 @@ export default class Service {
         const productId = Number(payload.productId);
         try {
             const repository = new Repository();
-            const product = await repository.updateProduct(productId, payload);
+            const product = await repository.updateProduct(productId, {
+                ...payload,
+                createdBy: payload.createdBy
+            });
             if (!product) {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });
             }
