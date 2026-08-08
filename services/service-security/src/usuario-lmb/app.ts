@@ -1,6 +1,6 @@
 import controller from './controller';
 import { addMiddleware, bootstrap, ApiGatewayEvent } from 'ly-nodejs-ts-common';
-import AuthMiddleware from '../common/middlewares/auth';
+import { AuthMiddleware } from 'ly-nodejs-ts-common';
 import RbacMiddleware from '../common/middlewares/rbac';
 
 const RequestIdMiddleware = () => ({

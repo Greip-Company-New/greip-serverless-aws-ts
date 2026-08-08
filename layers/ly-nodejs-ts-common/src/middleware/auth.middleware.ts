@@ -1,7 +1,17 @@
-// Middleware de autenticacion: valida el Bearer token JWT y expone payload.identity.
-import { verifyToken } from './token';
+// Middleware generico de autenticacion por Bearer JWT.
+// Valida el access token y expone payload.identity. Reutilizable desde
+// cualquier Lambda que requiera validacion de token.
+import { verifyToken } from '../services/token.service.js';
 
-export default function AuthMiddleware(options: { exclude?: string[] } = {}) {
+export interface AuthMiddlewareOptions {
+  exclude?: string[];
+}
+
+export function authChannelFromHeaders(headers: Record<string, any> = {}): string {
+  return headers['channel'] || headers['Channel'] || headers['Canal'] || headers['canal'] || '';
+}
+
+export default function AuthMiddleware(options: AuthMiddlewareOptions = {}) {
   const exclude = new Set(options.exclude || []);
 
   return {
@@ -35,7 +45,7 @@ export default function AuthMiddleware(options: { exclude?: string[] } = {}) {
         throw err;
       }
 
-      const requestChannel = headers['channel'] || headers['Channel'] || headers['Canal'] || headers['canal'] || '';
+      const requestChannel = authChannelFromHeaders(headers);
       if (!requestChannel) {
         const err = new Error(JSON.stringify({ success: false, statusCode: 400, message: 'Header channel es obligatorio' }));
         (err as any).httpStatus = 400;
