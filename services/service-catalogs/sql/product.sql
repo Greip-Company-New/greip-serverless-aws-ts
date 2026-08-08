@@ -24,7 +24,6 @@ CREATE TABLE IF NOT EXISTS greip.product (
 );
 
 -- Indices para los filtros de listProducts
-CREATE INDEX IF NOT EXISTS idx_product_tenant ON greip.product (tenant_id);
 CREATE INDEX IF NOT EXISTS idx_product_status ON greip.product (status);
 CREATE INDEX IF NOT EXISTS idx_product_name ON greip.product (name);
 
@@ -44,6 +43,9 @@ UPDATE greip.product p
    SET tenant_id = t.id
   FROM greip.tenant t
  WHERE t.code = 'GREIP' AND p.tenant_id IS NULL;
+
+-- Indice por tenant (se crea despues de la migracion, cuando la columna existe).
+CREATE INDEX IF NOT EXISTS idx_product_tenant ON greip.product (tenant_id);
 
 -- ---------- comentarios de tablas y columnas ----------
 

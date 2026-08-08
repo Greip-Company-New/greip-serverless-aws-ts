@@ -173,11 +173,7 @@ CREATE INDEX IF NOT EXISTS idx_person_tenant       ON greip.person (tenant_id);
 CREATE INDEX IF NOT EXISTS idx_person_document     ON greip.person (tenant_id, document_type, document_number);
 CREATE INDEX IF NOT EXISTS idx_person_email        ON greip.person (tenant_id, email);
 CREATE INDEX IF NOT EXISTS idx_user_role_user      ON greip.user_role (user_id);
-CREATE INDEX IF NOT EXISTS idx_user_role_tenant    ON greip.user_role (tenant_id);
 CREATE INDEX IF NOT EXISTS idx_group_member_user   ON greip.user_group_member (user_id);
-CREATE INDEX IF NOT EXISTS idx_group_member_tenant ON greip.user_group_member (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_role_perm_tenant    ON greip.role_permission (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_group_role_tenant   ON greip.user_group_role (tenant_id);
 
 -- =========================================================
 -- MIGRACION idempotente para entornos ya existentes (DEV).
@@ -292,6 +288,13 @@ UPDATE greip.user_group_role ugr
    SET tenant_id = g.tenant_id
   FROM greip.user_group g
  WHERE ugr.group_id = g.id AND ugr.tenant_id IS NULL;
+
+-- Indices por tenant de las tablas N:N (se crean despues de la migracion,
+-- cuando las columnas tenant_id ya existen en entornos preexistentes).
+CREATE INDEX IF NOT EXISTS idx_user_role_tenant    ON greip.user_role (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_group_member_tenant ON greip.user_group_member (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_role_perm_tenant    ON greip.role_permission (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_group_role_tenant   ON greip.user_group_role (tenant_id);
 
 -- ---------- seed: tenant GREIP + password_policy default ----------
 INSERT INTO greip.tenant (code, name)
