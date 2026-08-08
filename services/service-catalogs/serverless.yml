@@ -78,6 +78,7 @@ provider:
     PG_SECRET_DB: ${self:custom.config.secretDataBase.${self:custom.stageDeploy}}
     SM_JWT_PUBLIC_KEY: 'Greip/JWT-Public'
     SM_ENCRIPTACION_TOKEN: 'Greip/Encriptacion/Token'
+    LMB_ENTITY_AUDIT: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
     PROFILE_DEPLOYMENT: ${self:provider.profile}
     AWS_ACCOUNT: ${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}
 

@@ -76,6 +76,11 @@ lmbCrossEmail:
     DEV: 'SRV-CROSS-LMB-EMAIL'
     QA: 'SRV-CROSS-LMB-EMAIL'
     PROD: 'SRV-CROSS-LMB-EMAIL'
+# Microservicio de auditoria de entidades (Lambda-to-Lambda) del mismo servicio.
+lmbEntityAudit:
+    DEV: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
+    QA: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
+    PROD: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
 # ARN del DynamoDB Stream de USUARIOS para el procesador de auditoria.
 # Se regenera si la tabla se recrea (describe-table -> LatestStreamArn).
 dynamoStreamUsuarios:

@@ -290,3 +290,20 @@ AUDIT_STREAM_LMB:
           maximumRetryAttempts: 5
           bisectBatchOnFunctionError: true
           maximumRecordAgeInSeconds: 86400
+
+# Microservicio de auditoria de entidades: persiste el historial de cambios
+# (crear/actualizar/eliminar) de cualquier entidad en greip.entity_change_log.
+# Sin eventos HTTP: es invocado por Lambda-to-Lambda desde los servicios.
+ENTITY_AUDIT_LMB:
+    handler: dist/entity-audit-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-ENTITY-AUDIT
+    description: Microservicio de auditoria de cambios de entidades de GREIP COMPANY (historico generico en PostgreSQL)
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-postgresdb:${self:custom.config.lyPgNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/entity-audit-lmb/**/*.js'
+        - 'dist/entity-audit-lmb/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'

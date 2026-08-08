@@ -1,6 +1,7 @@
 // Servicio de usuarios y RBAC.
 import { UsuarioService } from '../common/usuario-service';
 import { registerAudit } from '../common/audit';
+import { registerEntityChange } from '../common/entity-audit-client';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, AUDIT_EVENTS } from '../common/constants';
 
 export default class UsuarioLmbService {
@@ -35,6 +36,22 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
+    await registerEntityChange({
+      entity: 'user',
+      entityKey: resultado.user.userId,
+      tenantId: identity?.tenantId,
+      changeType: 'CREATE',
+      status: 'A',
+      userId: identity?.sub || 'SYSTEM',
+      channel,
+      changes: {
+        email: { despues: resultado.user.email },
+        documentType: { despues: resultado.user.documentType },
+        documentNumber: { despues: resultado.user.documentNumber },
+        firstName: { despues: resultado.user.firstName },
+        fatherLastName: { despues: resultado.user.fatherLastName }
+      }
+    }).catch((err) => console.error('[entity-audit] createUser fallo', err));
     return resultado;
   }
 
@@ -57,6 +74,20 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
+    const cambios: Record<string, any> = {};
+    for (const key of Object.keys(campos)) {
+      cambios[key] = { despues: campos[key] };
+    }
+    await registerEntityChange({
+      entity: 'user',
+      entityKey: userId,
+      tenantId: identity?.tenantId,
+      changeType: 'UPDATE',
+      status: usuario.status,
+      userId: identity?.sub || 'SYSTEM',
+      channel,
+      changes: cambios
+    }).catch((err) => console.error('[entity-audit] updateUser fallo', err));
     return usuario;
   }
 
@@ -79,6 +110,16 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
+    await registerEntityChange({
+      entity: 'user',
+      entityKey: userId,
+      tenantId: identity?.tenantId,
+      changeType: 'DELETE',
+      status: 'I',
+      userId: identity?.sub || 'SYSTEM',
+      channel,
+      changes: { status: { antes: 'A', despues: 'I' } }
+    }).catch((err) => console.error('[entity-audit] deleteUser fallo', err));
     return { deleted: true };
   }
 
@@ -120,12 +161,22 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
+    await registerEntityChange({
+      entity: 'user',
+      entityKey: userId,
+      tenantId: identity?.tenantId,
+      changeType: 'ASSIGN',
+      status: 'A',
+      userId: identity?.sub || 'SYSTEM',
+      channel,
+      changes: { roles: { despues: asignados } }
+    }).catch((err) => console.error('[entity-audit] assignRoles fallo', err));
     return { assigned: asignados };
   }
 
   async removeRole(payload: any, identity: any): Promise<any> {
     const { userId, roleId } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel } = this.ctx(payload);
     if (!userId || !roleId) {
       throw new Error('userId y roleId son obligatorios');
     }
@@ -142,6 +193,16 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
+    await registerEntityChange({
+      entity: 'user',
+      entityKey: userId,
+      tenantId: identity?.tenantId,
+      changeType: 'REMOVE',
+      status: 'A',
+      userId: identity?.sub || 'SYSTEM',
+      channel,
+      changes: { roles: { antes: [roleId], despues: [] } }
+    }).catch((err) => console.error('[entity-audit] removeRole fallo', err));
     return { removed: true };
   }
 
@@ -169,6 +230,20 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
+    await registerEntityChange({
+      entity: 'role',
+      entityKey: String(rol.id),
+      tenantId: identity?.tenantId,
+      changeType: 'CREATE',
+      status: 'A',
+      userId: identity?.sub || 'SYSTEM',
+      channel,
+      changes: {
+        code: { despues: rol.code },
+        name: { despues: rol.name },
+        description: { despues: rol.description || '' }
+      }
+    }).catch((err) => console.error('[entity-audit] createRole fallo', err));
     return rol;
   }
 

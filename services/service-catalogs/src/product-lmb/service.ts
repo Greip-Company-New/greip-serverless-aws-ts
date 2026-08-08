@@ -1,5 +1,6 @@
 import { ResponseFactory } from 'ly-nodejs-ts-common';
 import { Repository } from './repository';
+import { registerEntityChange } from './entity-audit-client';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from './constants';
 
 function tenantIdFromIdentity(payload: any): number {
@@ -54,6 +55,21 @@ export default class Service {
                 createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM',
                 createdByChannel: channel
             });
+            registerEntityChange({
+                entity: 'product',
+                entityKey: product.productId,
+                tenantId,
+                changeType: 'CREATE',
+                status: product.status,
+                userId: payload.identity?.sub || 'SYSTEM',
+                channel,
+                changes: {
+                    name: { despues: product.name },
+                    description: { despues: product.description || '' },
+                    price: { despues: product.price },
+                    currency: { despues: product.currency }
+                }
+            }).catch((err) => console.error('[entity-audit] createProduct fallo', err));
             return ResponseFactory.created(product, `Producto creado exitosamente (id=${product.productId})`);
         } catch (err: any) {
             console.error('createProduct >>> ', err);
@@ -67,6 +83,7 @@ export default class Service {
             const repository = new Repository();
             const tenantId = tenantIdFromIdentity(payload);
             const channel = payload.identity?.channel || 'SYSTEM';
+            const antes = await repository.getProduct(productId, tenantId);
             const product = await repository.updateProduct(productId, {
                 ...payload,
                 tenantId,
@@ -75,6 +92,28 @@ export default class Service {
             }, tenantId);
             if (!product) {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });
+            }
+            if (antes) {
+                const cambios: Record<string, any> = {};
+                for (const campo of ['name', 'description', 'price', 'currency', 'status']) {
+                    const vAntes = (antes as any)[campo];
+                    const vDespues = (product as any)[campo];
+                    if (String(vAntes ?? '') !== String(vDespues ?? '')) {
+                        cambios[campo] = { antes: vAntes, despues: vDespues };
+                    }
+                }
+                if (Object.keys(cambios).length > 0) {
+                    registerEntityChange({
+                        entity: 'product',
+                        entityKey: productId,
+                        tenantId,
+                        changeType: 'UPDATE',
+                        status: product.status,
+                        userId: payload.identity?.sub || 'SYSTEM',
+                        channel,
+                        changes: cambios
+                    }).catch((err) => console.error('[entity-audit] updateProduct fallo', err));
+                }
             }
             return ResponseFactory.updated(product, `Producto actualizado exitosamente (id=${productId})`);
         } catch (err: any) {
@@ -88,10 +127,22 @@ export default class Service {
         try {
             const repository = new Repository();
             const tenantId = tenantIdFromIdentity(payload);
+            const channel = payload.identity?.channel || 'SYSTEM';
+            const antes = await repository.getProduct(productId, tenantId);
             const eliminado = await repository.deleteProduct(productId, tenantId);
             if (!eliminado) {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });
             }
+            registerEntityChange({
+                entity: 'product',
+                entityKey: productId,
+                tenantId,
+                changeType: 'DELETE',
+                status: 'I',
+                userId: payload.identity?.sub || 'SYSTEM',
+                channel,
+                changes: { status: { antes: antes?.status || 'A', despues: 'I' } }
+            }).catch((err) => console.error('[entity-audit] deleteProduct fallo', err));
             return ResponseFactory.deleted(`Producto eliminado exitosamente (id=${productId})`);
         } catch (err: any) {
             console.error('deleteProduct >>> ', err);

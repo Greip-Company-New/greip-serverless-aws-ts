@@ -1,6 +1,10 @@
 import Service from '../../src/product-lmb/service';
 import { Repository } from '../../src/product-lmb/repository';
 
+jest.mock('../../src/product-lmb/entity-audit-client', () => ({
+  registerEntityChange: jest.fn().mockResolvedValue(undefined)
+}));
+
 describe('Service product-lmb', () => {
   const producto = {
     productId: 1,
@@ -98,6 +102,7 @@ describe('Service product-lmb', () => {
 
   describe('updateProduct', () => {
     it('retorna 200 al actualizar el producto', async () => {
+      jest.spyOn(Repository.prototype, 'getProduct').mockResolvedValue(producto);
       jest.spyOn(Repository.prototype, 'updateProduct').mockResolvedValue(producto);
 
       const result = await Service.updateProduct({ productId: '1', name: 'Actualizado', price: 1600, identity });
@@ -109,6 +114,7 @@ describe('Service product-lmb', () => {
     });
 
     it('retorna 404 cuando el producto no existe', async () => {
+      jest.spyOn(Repository.prototype, 'getProduct').mockResolvedValue(null);
       jest.spyOn(Repository.prototype, 'updateProduct').mockResolvedValue(null);
 
       const result = await Service.updateProduct({ productId: '999', name: 'X', price: 10, identity });
@@ -120,6 +126,7 @@ describe('Service product-lmb', () => {
 
   describe('deleteProduct', () => {
     it('retorna 200 al eliminar el producto', async () => {
+      jest.spyOn(Repository.prototype, 'getProduct').mockResolvedValue(producto);
       jest.spyOn(Repository.prototype, 'deleteProduct').mockResolvedValue(true);
 
       const result = await Service.deleteProduct({ productId: '1', identity });
@@ -131,6 +138,7 @@ describe('Service product-lmb', () => {
     });
 
     it('retorna 404 cuando el producto no existe', async () => {
+      jest.spyOn(Repository.prototype, 'getProduct').mockResolvedValue(null);
       jest.spyOn(Repository.prototype, 'deleteProduct').mockResolvedValue(false);
 
       const result = await Service.deleteProduct({ productId: '999', identity });

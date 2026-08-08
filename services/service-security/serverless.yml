@@ -88,6 +88,7 @@ provider:
     TABLA_MFA: ${self:custom.config.tablaMfa.${self:custom.stageDeploy}}
     LMB_SMS: ${self:custom.config.lmbCrossSms.${self:custom.stageDeploy}}
     LMB_EMAIL: ${self:custom.config.lmbCrossEmail.${self:custom.stageDeploy}}
+    LMB_ENTITY_AUDIT: ${self:custom.config.lmbEntityAudit.${self:custom.stageDeploy}}
     TENANT_DEFAULT: 'GREIP'
     EMAIL_SES_FROM: 'no-reply@greip.com.pe'
     FRONTEND_URL: 'https://greip.com.pe'
