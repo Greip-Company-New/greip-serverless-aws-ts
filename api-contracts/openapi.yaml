@@ -14,7 +14,8 @@ info:
       `Authorization: Bearer <accessToken>` (JWT RS256) y permisos RBAC.
     - Los endpoints de `service-catalogs` (`/product`) requieren también
       `Authorization: Bearer <accessToken>` (JWT RS256). El `createdBy`/`updatedBy` de los
-      productos se toma del `sub` (userId) del token.
+      productos se toma del `sub` (userId) del token, y el `tenantId` (aislamiento por empresa)
+      se toma del `tenantId` incluido en el token — nunca del request del cliente.
 
     **Envoltorio de respuestas:**
     - En **éxito** (200/201) el body es el objeto `Response` directamente:
@@ -708,11 +709,6 @@ paths:
           schema:
             type: string
           description: Filtro por nombre (ILIKE parcial)
-        - name: tenantId
-          in: query
-          schema:
-            type: integer
-          description: Filtro por tenant (empresa)
       responses:
         "200":
           description: |
@@ -1853,12 +1849,9 @@ components:
       type: object
       required: [name, price]
       properties:
-        tenantId:
-          type: integer
-          description: Identificador del tenant (empresa) al que pertenece el producto.
         createdBy:
           type: string
-          description: Email/userId del solicitante (auditoría).
+          description: Email/userId del solicitante (auditoría; opcional, se ignora si viene el token).
           example: admin@greip.com.pe
         name:
           type: string

@@ -40,8 +40,8 @@ export class Repository {
     return { data: result.data.map(mapProduct), total: result.total };
   }
 
-  async getProduct(productId: number): Promise<Product | null> {
-    const row = await db.executeOne(GET_PRODUCT_QUERY, [productId]);
+  async getProduct(productId: number, tenantId?: number): Promise<Product | null> {
+    const row = await db.executeOne(GET_PRODUCT_QUERY, [productId, tenantId || null]);
     return row ? mapProduct(row) : null;
   }
 
@@ -53,16 +53,16 @@ export class Repository {
     return mapProduct(row);
   }
 
-  async updateProduct(productId: number, product: ProductRequest): Promise<Product | null> {
+  async updateProduct(productId: number, product: ProductRequest, tenantId?: number): Promise<Product | null> {
     const row = await db.executeOne(
       UPDATE_PRODUCT_QUERY,
-      [productId, product.name, product.description ?? null, product.price, product.currency ?? 'PEN', product.status ?? 'A', product.createdBy || 'SYSTEM']
+      [productId, product.name, product.description ?? null, product.price, product.currency ?? 'PEN', product.status ?? 'A', product.createdBy || 'SYSTEM', tenantId || null]
     );
     return row ? mapProduct(row) : null;
   }
 
-  async deleteProduct(productId: number): Promise<boolean> {
-    const row = await db.executeOne(DELETE_PRODUCT_QUERY, [productId]);
+  async deleteProduct(productId: number, tenantId?: number): Promise<boolean> {
+    const row = await db.executeOne(DELETE_PRODUCT_QUERY, [productId, tenantId || null]);
     return !!row;
   }
 }

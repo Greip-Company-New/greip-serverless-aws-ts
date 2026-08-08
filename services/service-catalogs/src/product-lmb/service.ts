@@ -2,6 +2,14 @@ import { ResponseFactory } from 'ly-nodejs-ts-common';
 import { Repository } from './repository';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from './constants';
 
+function tenantIdFromIdentity(payload: any): number {
+  const tenantId = payload.identity?.tenantId;
+  if (!tenantId) {
+    throw new Error('Tenant no identificado en el token');
+  }
+  return Number(tenantId);
+}
+
 export default class Service {
 
     static async listProducts(payload: any): Promise<any> {
@@ -9,8 +17,9 @@ export default class Service {
             const repository = new Repository();
             const page = Number(payload.page) || DEFAULT_PAGE;
             const pageSize = Math.min(Number(payload.pageSize) || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+            const tenantId = tenantIdFromIdentity(payload);
 
-            const { data, total } = await repository.listProducts(page, pageSize, payload.status, payload.name, payload.tenantId);
+            const { data, total } = await repository.listProducts(page, pageSize, payload.status, payload.name, tenantId);
             return ResponseFactory.paginated(data, total, page, pageSize, 'Listado de productos obtenido exitosamente');
         } catch (err: any) {
             console.error('listProducts >>> ', err);
@@ -22,7 +31,8 @@ export default class Service {
         const productId = Number(payload.productId);
         try {
             const repository = new Repository();
-            const product = await repository.getProduct(productId);
+            const tenantId = tenantIdFromIdentity(payload);
+            const product = await repository.getProduct(productId, tenantId);
             if (!product) {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });
             }
@@ -36,9 +46,10 @@ export default class Service {
     static async createProduct(payload: any): Promise<any> {
         try {
             const repository = new Repository();
+            const tenantId = tenantIdFromIdentity(payload);
             const product = await repository.createProduct({
                 ...payload,
-                tenantId: payload.tenantId,
+                tenantId,
                 createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM'
             });
             return ResponseFactory.created(product, `Producto creado exitosamente (id=${product.productId})`);
@@ -52,10 +63,12 @@ export default class Service {
         const productId = Number(payload.productId);
         try {
             const repository = new Repository();
+            const tenantId = tenantIdFromIdentity(payload);
             const product = await repository.updateProduct(productId, {
                 ...payload,
+                tenantId,
                 createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM'
-            });
+            }, tenantId);
             if (!product) {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });
             }
@@ -70,7 +83,8 @@ export default class Service {
         const productId = Number(payload.productId);
         try {
             const repository = new Repository();
-            const eliminado = await repository.deleteProduct(productId);
+            const tenantId = tenantIdFromIdentity(payload);
+            const eliminado = await repository.deleteProduct(productId, tenantId);
             if (!eliminado) {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });
             }

@@ -18,7 +18,7 @@ export const GET_PRODUCT_QUERY: string = `
 SELECT id, tenant_id, name, description, price, currency, status,
        created_by, created_at, updated_by, updated_at
   FROM greip.product
- WHERE id = $1`;
+ WHERE id = $1 AND ($2::int IS NULL OR tenant_id = $2)`;
 
 export const INSERT_PRODUCT_QUERY: string = `
 INSERT INTO greip.product (tenant_id, name, description, price, currency, status,
@@ -36,11 +36,11 @@ UPDATE greip.product
        status = $6,
        updated_by = $7,
        updated_at = now()
- WHERE id = $1
+ WHERE id = $1 AND ($8::int IS NULL OR tenant_id = $8)
 RETURNING id, tenant_id, name, description, price, currency, status,
           created_by, created_at, updated_by, updated_at`;
 
 export const DELETE_PRODUCT_QUERY: string = `
 DELETE FROM greip.product
- WHERE id = $1
+ WHERE id = $1 AND ($2::int IS NULL OR tenant_id = $2)
 RETURNING id`;

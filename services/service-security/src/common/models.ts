@@ -187,7 +187,8 @@ export interface PoliticaContrasena {
 // ---- Identidad extraida del JWT ----
 export interface Identidad {
   sub: string;             // userId
-  tenant: string;
+  tenant: string;          // codigo del tenant (ej. GREIP)
+  tenantId?: number;       // id numerico del tenant en PostgreSQL
   channel?: string;
   type: string;            // ACCESS | MFA | RESET
   exp?: number;

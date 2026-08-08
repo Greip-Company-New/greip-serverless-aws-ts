@@ -12,7 +12,6 @@ export default class Validate {
       pageSize: Joi.number().integer().min(1).max(100).optional(),
       status: Joi.string().valid(...PRODUCT_STATUS).optional().empty(''),
       name: Joi.string().max(100).optional().empty(''),
-      tenantId: Joi.number().integer().min(1).optional(),
       headers: Joi.object().optional().unknown(true),
     });
 
@@ -48,7 +47,6 @@ export default class Validate {
     const schema = Joi.object({
       requestId: Joi.string().optional(),
       canal: Joi.string().valid(...CANALES).optional(),
-      tenantId: Joi.number().integer().min(1).optional(),
       createdBy: Joi.string().optional().empty(''),
       name: Joi.string().required(),
       description: Joi.string().max(500).allow(null).optional().empty(''),

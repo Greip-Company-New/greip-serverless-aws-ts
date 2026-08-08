@@ -2,6 +2,7 @@
 import crypto from 'crypto';
 import { UsuarioRepository, mapPublicUser } from './repositories/dynamodb/usuario';
 import { SesionRepository } from './repositories/dynamodb/sesion';
+import { RbacRepository } from './repositories/postgres/rbac';
 import { firmarToken, verificarToken } from './token';
 import { sha256Hex } from './password';
 import {
@@ -15,19 +16,28 @@ import { UsuarioDynamo, ResultadoTokens, Identidad } from './models';
 export class SesionService {
   private usuarioRepo: UsuarioRepository;
   private sesionRepo: SesionRepository;
+  private rbac: RbacRepository;
 
   constructor() {
     this.usuarioRepo = new UsuarioRepository();
     this.sesionRepo = new SesionRepository();
+    this.rbac = new RbacRepository();
+  }
+
+  private async resolveTenantId(tenantCode: string): Promise<number | undefined> {
+    const tenant = await this.rbac.getTenant(tenantCode);
+    return tenant?.id;
   }
 
   /**
    * Genera el par access/refresh, crea la sesion en DynamoDB y devuelve los tokens.
    */
   async startSession(usuario: UsuarioDynamo, extras?: { permissions?: string[]; roles?: string[]; userAgent?: string; ip?: string }): Promise<ResultadoTokens> {
+    const tenantId = await this.resolveTenantId(usuario.tenant);
     const identidad: Identidad = {
       sub: usuario.userId,
       tenant: usuario.tenant,
+      tenantId,
       type: TOKEN_TYPE_ACCESS,
       permissions: extras?.permissions,
       roles: extras?.roles
@@ -81,8 +91,9 @@ export class SesionService {
     const nuevoRefresh = await this.generateRefreshToken(usuario.userId, usuario.tenant);
     await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(nuevoRefresh), userAgent || sesion.userAgent, ip || sesion.ip, usuario.userId);
 
+    const tenantId = await this.resolveTenantId(usuario.tenant);
     const accessToken = await firmarToken(
-      { sub: usuario.userId, tenant: usuario.tenant, type: TOKEN_TYPE_ACCESS },
+      { sub: usuario.userId, tenant: usuario.tenant, tenantId, type: TOKEN_TYPE_ACCESS },
       ACCESS_TOKEN_TTL_MIN
     );
 

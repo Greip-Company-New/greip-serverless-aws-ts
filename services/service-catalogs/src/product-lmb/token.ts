@@ -27,6 +27,7 @@ async function decryptData(data: string): Promise<any> {
 export interface TokenIdentity {
   sub: string;
   tenant: string;
+  tenantId?: number;
   type: string;
   exp?: number;
   permissions?: string[];
