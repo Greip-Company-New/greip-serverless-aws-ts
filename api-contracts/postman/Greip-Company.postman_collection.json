@@ -817,6 +817,50 @@
             },
             "description": "Obtiene un evento de auditoría por su sort key (EVENT#fecha#id)."
           }
+        },
+        {
+          "name": "Get entity change log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/entity-audit?entity=product&entityKey={{productId}}&tenantId=1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "entity-audit"
+              ],
+              "query": [
+                {
+                  "key": "entity",
+                  "value": "product"
+                },
+                {
+                  "key": "entityKey",
+                  "value": "{{productId}}"
+                },
+                {
+                  "key": "tenantId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
         }
       ]
     },

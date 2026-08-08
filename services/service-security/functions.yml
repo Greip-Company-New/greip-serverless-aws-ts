@@ -293,7 +293,8 @@ AUDIT_STREAM_LMB:
 
 # Microservicio de auditoria de entidades: persiste el historial de cambios
 # (crear/actualizar/eliminar) de cualquier entidad en greip.entity_change_log.
-# Sin eventos HTTP: es invocado por Lambda-to-Lambda desde los servicios.
+# registerChange es invocado por Lambda-to-Lambda desde los servicios;
+# listChanges expone la consulta por entity + entityKey + tenantId via HTTP.
 ENTITY_AUDIT_LMB:
     handler: dist/entity-audit-lmb/app.handler
     name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-ENTITY-AUDIT
@@ -307,3 +308,14 @@ ENTITY_AUDIT_LMB:
         - 'dist/entity-audit-lmb/**/*.ts'
         - 'dist/common/**/*.js'
         - 'dist/common/**/*.ts'
+    events:
+      - http:
+          path: /entity-audit
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/entity-audit-lmb/listChanges.vm)}
+          response: ${file(config/serverless/http-response.yml)}

@@ -711,6 +711,59 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /entity-audit:
+    get:
+      tags: [Audit]
+      summary: Consultar el historial de cambios de una entidad (logs de auditoría)
+      operationId: entityAuditList
+      description: |
+        Devuelve el histórico de cambios de una entidad concreta consultando por
+        `entity` + `entityKey` + `tenantId` (usado por las pantallas para mostrar
+        los logs de una entidad). Ordenado de más reciente a más antiguo.
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: entity
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Nombre de la entidad (product, user, role, permission, user_group).
+          example: product
+        - name: entityKey
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Identificador del registro (id de producto, userId, roleId, ...).
+          example: "5"
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Tenant (empresa) al que pertenece el registro.
+          example: 1
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: |
+            Lista paginada de cambios de la entidad. `data` es un array de `EntityChangeLog`
+            y `metadata.pagination` contiene la paginación.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityChangeLogListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   # =========================================================
   # PRODUCT (service-catalogs)
   # =========================================================
@@ -1470,6 +1523,69 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/AuditEvent"
+
+    # ===================== ENTITY CHANGE LOG (service-security) =====================
+    EntityChangeLogListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/EntityChangeLog"
+            metadata:
+              type: object
+              properties:
+                pagination:
+                  $ref: "#/components/schemas/Pagination"
+
+    EntityChangeLog:
+      type: object
+      description: Entrada del histórico de cambios de una entidad (tabla greip.entity_change_log).
+      properties:
+        id:
+          type: string
+          description: Identificador del registro de auditoría.
+        entity:
+          type: string
+          description: Entidad afectada (product, user, role, permission, user_group).
+          example: product
+        entity_key:
+          type: string
+          description: Identificador del registro afectado.
+          example: "5"
+        tenant_id:
+          type: integer
+          description: Tenant (empresa) al que pertenece el cambio.
+        change_type:
+          type: string
+          description: Tipo de cambio (CREATE, UPDATE, DELETE, ASSIGN, REMOVE).
+          example: UPDATE
+        status:
+          type: string
+          description: Estado resultante del registro (A=activo, I=inactivo).
+        user_id:
+          type: string
+          description: Usuario (userId) que realizó el cambio.
+          example: be347ee0-25b1-4140-aa1c-de5f595266cb
+        channel:
+          type: string
+          description: Canal desde el que se realizó el cambio.
+          example: AppWeb
+        changes:
+          type: object
+          description: |
+            Atributos que cambiaron; cada atributo lleva `antes` y `despues`.
+            Ejemplo: `{ "name": { "antes": "Mansana", "despues": "Manzana" } }`.
+          example:
+            name:
+              antes: Mansana
+              despues: Manzana
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha/hora en que se realizó el cambio.
 
     # ===================== PRODUCT =====================
     ProductListResponse:

@@ -64,10 +64,10 @@ export default class Service {
                 userId: payload.identity?.sub || 'SYSTEM',
                 channel,
                 changes: {
-                    name: { despues: product.name },
-                    description: { despues: product.description || '' },
-                    price: { despues: product.price },
-                    currency: { despues: product.currency }
+                    name: { antes: null, despues: product.name },
+                    description: { antes: null, despues: product.description || '' },
+                    price: { antes: null, despues: product.price },
+                    currency: { antes: null, despues: product.currency }
                 }
             }).catch((err) => console.error('[entity-audit] createProduct fallo', err));
             return ResponseFactory.created(product, `Producto creado exitosamente (id=${product.productId})`);
@@ -141,7 +141,13 @@ export default class Service {
                 status: 'I',
                 userId: payload.identity?.sub || 'SYSTEM',
                 channel,
-                changes: { status: { antes: antes?.status || 'A', despues: 'I' } }
+                changes: antes ? {
+                    name: { antes: antes.name, despues: null },
+                    description: { antes: antes.description || '', despues: null },
+                    price: { antes: antes.price, despues: null },
+                    currency: { antes: antes.currency, despues: null },
+                    status: { antes: antes.status, despues: 'I' }
+                } : { status: { antes: 'A', despues: 'I' } }
             }).catch((err) => console.error('[entity-audit] deleteProduct fallo', err));
             return ResponseFactory.deleted(`Producto eliminado exitosamente (id=${productId})`);
         } catch (err: any) {

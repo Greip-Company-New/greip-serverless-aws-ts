@@ -24,9 +24,15 @@ CREATE TABLE IF NOT EXISTS greip.entity_change_log (
     created_at   TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
--- Indices para consultar el historial por entidad y por tenant.
-CREATE INDEX IF NOT EXISTS idx_entity_change_log_entity ON greip.entity_change_log (entity, entity_key);
+-- Indices para consultar el historial por entidad, registro y tenant.
+-- El indice compuesto es el principal: cubre la consulta por los 3 campos
+-- (entity, entity_key, tenant_id) usada en la API de logs.
+CREATE INDEX IF NOT EXISTS idx_entity_change_log_lookup ON greip.entity_change_log (entity, entity_key, tenant_id);
 CREATE INDEX IF NOT EXISTS idx_entity_change_log_tenant ON greip.entity_change_log (tenant_id, created_at);
+
+-- El indice por (entity, entity_key) queda cubierto por el compuesto: se elimina
+-- en entornos que ya lo tuvieran.
+DROP INDEX IF EXISTS greip.idx_entity_change_log_entity;
 
 -- ---------- comentarios de tablas y columnas ----------
 

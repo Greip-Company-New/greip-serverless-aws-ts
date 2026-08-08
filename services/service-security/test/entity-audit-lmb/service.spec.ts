@@ -2,17 +2,20 @@ import Service from '../../src/entity-audit-lmb/service';
 
 jest.mock('ly-nodejs-ts-postgresdb', () => {
   const mockExecuteOne = jest.fn();
+  const mockExecute = jest.fn();
   return {
-    PostgresDatabaseService: jest.fn().mockImplementation(() => ({ executeOne: mockExecuteOne })),
-    __mockExecuteOne: mockExecuteOne
+    PostgresDatabaseService: jest.fn().mockImplementation(() => ({ executeOne: mockExecuteOne, execute: mockExecute })),
+    __mockExecuteOne: mockExecuteOne,
+    __mockExecute: mockExecute
   };
 });
 
-const { __mockExecuteOne: mockExecuteOne } = jest.requireMock('ly-nodejs-ts-postgresdb');
+const { __mockExecuteOne: mockExecuteOne, __mockExecute: mockExecute } = jest.requireMock('ly-nodejs-ts-postgresdb');
 
 describe('entity-audit-lmb/service', () => {
   beforeEach(() => {
     mockExecuteOne.mockReset();
+    mockExecute.mockReset();
   });
 
   it('registra un cambio insertando en entity_change_log', async () => {
@@ -76,5 +79,35 @@ describe('entity-audit-lmb/service', () => {
       tenantId: 1,
       changeType: 'CREATE'
     })).rejects.toThrow('No se pudo registrar el cambio');
+  });
+
+  it('listChanges consulta por entity, entityKey y tenantId con paginacion', async () => {
+    mockExecute.mockImplementation((sql: string) => {
+      if (sql.includes('COUNT')) {
+        return Promise.resolve({ rows: [{ total: 1 }] });
+      }
+      return Promise.resolve({ rows: [{
+        id: '3', entity: 'product', entity_key: '5', tenant_id: 1,
+        change_type: 'UPDATE', status: 'A', user_id: 'user-1',
+        channel: 'AppWeb', changes: { name: { antes: 'Mansana', despues: 'Manzana' } },
+        created_at: '2026-08-08T00:15:45.119Z'
+      }] });
+    });
+
+    const result = await Service.listChanges({ entity: 'product', entityKey: '5', tenantId: 1, page: 1, pageSize: 10 });
+
+    expect(result.total).toBe(1);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].entity_key).toBe('5');
+
+    // verifica que el COUNT use los 3 campos
+    const countParams = mockExecute.mock.calls[0][1];
+    expect(countParams).toEqual(['product', '5', 1]);
+
+    // verifica el query de listado con paginacion
+    const listParams = mockExecute.mock.calls[1][1];
+    expect(listParams.slice(0, 3)).toEqual(['product', '5', 1]);
+    expect(listParams[3]).toBe(10); // limit
+    expect(listParams[4]).toBe(0);  // offset
   });
 });

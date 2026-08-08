@@ -45,11 +45,11 @@ export default class UsuarioLmbService {
       userId: identity?.sub || 'SYSTEM',
       channel,
       changes: {
-        email: { despues: resultado.user.email },
-        documentType: { despues: resultado.user.documentType },
-        documentNumber: { despues: resultado.user.documentNumber },
-        firstName: { despues: resultado.user.firstName },
-        fatherLastName: { despues: resultado.user.fatherLastName }
+        email: { antes: null, despues: resultado.user.email },
+        documentType: { antes: null, despues: resultado.user.documentType },
+        documentNumber: { antes: null, despues: resultado.user.documentNumber },
+        firstName: { antes: null, despues: resultado.user.firstName },
+        fatherLastName: { antes: null, despues: resultado.user.fatherLastName }
       }
     }).catch((err) => console.error('[entity-audit] createUser fallo', err));
     return resultado;
@@ -61,6 +61,7 @@ export default class UsuarioLmbService {
     if (!userId) {
       throw new Error('userId es obligatorio');
     }
+    const antes = await this.usuarioService.getUser(userId);
     const usuario = await this.usuarioService.updateUser(userId, { ...campos, channel }, identity?.sub);
     await registerAudit(
       {
@@ -74,9 +75,20 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
+    const mapeo = {
+      email: 'email',
+      firstName: 'firstName',
+      fatherLastName: 'fatherLastName',
+      motherLastName: 'motherLastName',
+      documentType: 'documentType',
+      documentNumber: 'documentNumber',
+      phone: 'phone',
+      status: 'status'
+    };
     const cambios: Record<string, any> = {};
     for (const key of Object.keys(campos)) {
-      cambios[key] = { despues: campos[key] };
+      const campo = (mapeo as any)[key] || key;
+      cambios[campo] = { antes: antes?.user?.[campo] ?? null, despues: campos[key] };
     }
     await registerEntityChange({
       entity: 'user',
@@ -239,9 +251,9 @@ export default class UsuarioLmbService {
       userId: identity?.sub || 'SYSTEM',
       channel,
       changes: {
-        code: { despues: rol.code },
-        name: { despues: rol.name },
-        description: { despues: rol.description || '' }
+        code: { antes: null, despues: rol.code },
+        name: { antes: null, despues: rol.name },
+        description: { antes: null, despues: rol.description || '' }
       }
     }).catch((err) => console.error('[entity-audit] createRole fallo', err));
     return rol;
