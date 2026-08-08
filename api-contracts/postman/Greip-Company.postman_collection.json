@@ -36,6 +36,10 @@
     {
       "key": "productId",
       "value": ""
+    },
+    {
+      "key": "ak-service-cross",
+      "value": ""
     }
   ],
   "item": [
@@ -748,7 +752,11 @@
             "header": [
               {
                 "key": "x-api-key",
-                "value": "{{ak-service-catalog}}"
+                "value": "{{ak-service-catalogs}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
               }
             ],
             "url": {
@@ -784,7 +792,11 @@
             "header": [
               {
                 "key": "x-api-key",
-                "value": "{{ak-service-catalog}}"
+                "value": "{{ak-service-catalogs}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
               }
             ],
             "url": {
@@ -811,7 +823,11 @@
               },
               {
                 "key": "x-api-key",
-                "value": "{{ak-service-catalog}}"
+                "value": "{{ak-service-catalogs}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
@@ -856,7 +872,11 @@
               },
               {
                 "key": "x-api-key",
-                "value": "{{ak-service-catalog}}"
+                "value": "{{ak-service-catalogs}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
@@ -883,7 +903,11 @@
             "header": [
               {
                 "key": "x-api-key",
-                "value": "{{ak-service-catalog}}"
+                "value": "{{ak-service-catalogs}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
               }
             ],
             "url": {
@@ -897,6 +921,146 @@
                 "{{productId}}"
               ]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-cross / Notification",
+      "item": [
+        {
+          "name": "Send email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-cross}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": [\"destino@greip.com.pe\"],\n  \"subject\": \"Notificacion GREIP COMPANY\",\n  \"html\": \"<h1>Hola</h1>\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-cross/cross/email",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-cross",
+                "cross",
+                "email"
+              ]
+            },
+            "description": "Enviar correo vía SES. Requiere to (array) y al menos html o text."
+          }
+        },
+        {
+          "name": "Send SMS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-cross}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"+51999888777\",\n  \"message\": \"GREIP: tu codigo de verificacion es 123456\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-cross/cross/sms",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-cross",
+                "cross",
+                "sms"
+              ]
+            },
+            "description": "Enviar SMS vía SNS."
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-cross / Crypto",
+      "item": [
+        {
+          "name": "Encrypt token data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-cross}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"sub\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"tenant\": \"GREIP\",\n    \"roles\": [\"ADMIN\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-cross/cross/token/encrypt",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-cross",
+                "cross",
+                "token",
+                "encrypt"
+              ]
+            },
+            "description": "Cifrar la data que viaja dentro del token JWT (AES)."
+          }
+        },
+        {
+          "name": "Decrypt token data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-cross}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"encrypted\": \"<valor devuelto por /cross/token/encrypt>\"\n}"
+            },
+            "url": {
+              "raw": "{{api-server}}/srv-cross/cross/token/decrypt",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-cross",
+                "cross",
+                "token",
+                "decrypt"
+              ]
+            },
+            "description": "Descifrar la data del token JWT."
           }
         }
       ]

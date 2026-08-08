@@ -6,6 +6,7 @@ info:
 
     - `service-security`: autenticación, usuarios + RBAC y auditoría.
     - `service-catalogs`: catálogo de productos.
+    - `service-cross`: notificaciones (email/SMS) y cifrado de data de tokens.
 
     **Autenticación:**
     - Todos los endpoints requieren la API Key por header `x-api-key` (usage plan de API Gateway).
@@ -31,6 +32,8 @@ servers:
     description: DEV - service-security (us-east-2)
   - url: https://apidev.greip.com.pe/srv-catalogs
     description: DEV - service-catalogs (us-east-2)
+  - url: https://apidev.greip.com.pe/srv-cross
+    description: DEV - service-cross (us-east-2)
 tags:
   - name: Auth
     description: Autenticación y gestión de contraseñas (service-security)
@@ -40,6 +43,10 @@ tags:
     description: Consulta de auditoría (service-security)
   - name: Product
     description: Catálogo de productos (service-catalogs)
+  - name: Notification
+    description: Notificaciones email/SMS (service-cross)
+  - name: Crypto
+    description: Cifrado y descifrado de data de tokens (service-cross)
 
 security:
   - ApiKeyAuth: []
@@ -813,6 +820,116 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  # =========================================================
+  # CROSS (service-cross)
+  # =========================================================
+  /cross/email:
+    post:
+      tags: [Notification]
+      summary: Enviar un correo electrónico vía SES
+      operationId: crossSendEmail
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendEmailRequest"
+      responses:
+        "200":
+          description: 'Correo encolado en SES (`data: { messageId }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendEmailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /cross/sms:
+    post:
+      tags: [Notification]
+      summary: Enviar un SMS vía SNS
+      operationId: crossSendSms
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendSmsRequest"
+      responses:
+        "200":
+          description: 'SMS publicado en SNS (`data: { messageId }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendSmsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /cross/token/encrypt:
+    post:
+      tags: [Crypto]
+      summary: Cifrar la data que viaja dentro del token JWT (AES)
+      operationId: crossEncryptTokenData
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  description: 'Data a cifrar (objeto con claims del token: sub, tenant, roles, permissions, etc.).'
+                  type: object
+                  example:
+                    sub: 550e8400-e29b-41d4-a716-446655440000
+                    tenant: GREIP
+                    roles: [ADMIN]
+      responses:
+        "200":
+          description: 'Data cifrada (`data: { encrypted, algorithm }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EncryptTokenDataResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /cross/token/decrypt:
+    post:
+      tags: [Crypto]
+      summary: Descifrar la data cifrada del token JWT (AES)
+      operationId: crossDecryptTokenData
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [encrypted]
+              properties:
+                encrypted:
+                  type: string
+                  description: Valor cifrado devuelto por /cross/token/encrypt.
+                  example: 35424e37412d6d5e15b5559ff4e661...
+      responses:
+        "200":
+          description: 'Data descifrada (`data: { decrypted, algorithm }`). `decrypted` es el JSON original en texto.'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecryptTokenDataResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
 components:
   securitySchemes:
@@ -1767,3 +1884,115 @@ components:
           description: Estado del producto.
           enum: [A, I]
           default: A
+
+    # ===================== CROSS (service-cross) =====================
+    SendEmailRequest:
+      type: object
+      required: [to]
+      properties:
+        to:
+          type: array
+          description: Destinatarios del correo (mínimo 1).
+          items:
+            type: string
+            format: email
+          example: ["destino@greip.com.pe"]
+        subject:
+          type: string
+          maxLength: 200
+          description: Asunto del correo.
+          example: Notificacion GREIP COMPANY
+        html:
+          type: string
+          description: Cuerpo del correo en HTML (alternativa a `text`).
+        text:
+          type: string
+          description: Cuerpo del correo en texto plano (alternativa a `html`).
+        from:
+          type: string
+          format: email
+          description: 'Remitente (default: no-reply@greip.com.pe).'
+          example: no-reply@greip.com.pe
+        replyTo:
+          type: array
+          description: Direcciones de respuesta (opcional).
+          items:
+            type: string
+            format: email
+
+    SendEmailResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [messageId]
+              properties:
+                messageId:
+                  type: string
+                  description: Id del mensaje devuelto por SES.
+                  example: "0100017f00000000-00000000-0000-0000-000000000000-000000"
+
+    SendSmsRequest:
+      type: object
+      required: [phoneNumber, message]
+      properties:
+        phoneNumber:
+          type: string
+          pattern: "^\\+?[0-9]{9,15}$"
+          description: Número de teléfono de destino (formato internacional).
+          example: "+51999888777"
+        message:
+          type: string
+          maxLength: 1600
+          description: Contenido del SMS.
+          example: "GREIP: tu codigo de verificacion es 123456"
+
+    SendSmsResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [messageId]
+              properties:
+                messageId:
+                  type: string
+                  description: Id del mensaje devuelto por SNS.
+                  example: "5c5f3c2a-9a3a-4f8b-9b4a-2f1c6f9e0000"
+
+    EncryptTokenDataResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [encrypted, algorithm]
+              properties:
+                encrypted:
+                  type: string
+                  description: Data cifrada en hexadecimal (AES-CBC).
+                algorithm:
+                  type: string
+                  description: Algoritmo usado (aes-256-cbc).
+                  example: aes-256-cbc
+
+    DecryptTokenDataResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [decrypted, algorithm]
+              properties:
+                decrypted:
+                  type: string
+                  description: Data descifrada (el JSON original en texto).
+                algorithm:
+                  type: string
+                  description: Algoritmo usado (aes-256-cbc).
+                  example: aes-256-cbc

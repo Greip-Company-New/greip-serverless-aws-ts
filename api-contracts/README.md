@@ -6,8 +6,8 @@ Contrato OpenAPI 3.0.3 y colección Postman de las APIs de GREIP COMPANY (DEV).
 
 | Archivo | Descripción |
 |---------|-------------|
-| `openapi.yaml` | Contrato OpenAPI 3.0.3 de `service-security` y `service-catalogs`. |
-| `postman/Greip-Company.postman_collection.json` | Colección Postman (25 requests) lista para importar. |
+| `openapi.yaml` | Contrato OpenAPI 3.0.3 de `service-security`, `service-catalogs` y `service-cross`. |
+| `postman/Greip-Company.postman_collection.json` | Colección Postman (29 requests) lista para importar. |
 
 ## Flujo de prueba (DEV)
 
@@ -25,10 +25,12 @@ Contrato OpenAPI 3.0.3 y colección Postman de las APIs de GREIP COMPANY (DEV).
    - `api-server` → `https://apidev.greip.com.pe`
    - `ak-service-security` → API Key de `service-security` (ya incluida por defecto)
    - `ak-service-catalogs` → API Key de `service-catalogs` (a definir por el usuario)
+   - `ak-service-cross` → API Key de `service-cross` (a definir por el usuario)
 
    API Keys DEV (recuperadas de API Gateway):
    - `service-security`: `<SECRETO: ver API Gateway / Secrets Manager>`
    - `service-catalogs`: `<SECRETO: ver API Gateway / Secrets Manager>`
+   - `service-cross`: `<SECRETO: ver API Gateway / Secrets Manager>`
 
    > Estas keys son de DEV. No commitearlas ni usarlas fuera del entorno DEV.
 
@@ -36,7 +38,8 @@ Contrato OpenAPI 3.0.3 y colección Postman de las APIs de GREIP COMPANY (DEV).
    - `Auth > Login` (guarda el `accessToken` en la variable `token` automáticamente).
    - `User > Create user` (guarda `userId`), `Role > Create role` (guarda `roleId`).
    - `User > Assign roles`, `User > Get user permissions`, etc.
-   - `Product > Create product` (guarda `productId`) y el resto de CRUD.
+   - `Product > Create product` (guarda `productId`) y el resto de CRUD (requieren el `token` en `Authorization: Bearer`).
+   - `service-cross > Notification` (email/SMS) y `Crypto` (encrypt/decrypt de data de token).
 
 ## Formato de respuesta
 
