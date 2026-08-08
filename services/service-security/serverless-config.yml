@@ -43,9 +43,9 @@ profile:
     QA: 'qaGreipCompany'
     PROD: 'prodGreipCompany'
 lyCommonNew:
-    DEV: 7
-    QA: 7
-    PROD: 7
+    DEV: 8
+    QA: 8
+    PROD: 8
 lyPgNew:
     DEV: 1
     QA: 1
@@ -59,10 +59,6 @@ tablaSesiones:
     DEV: 'TBL_GREIP_SEGURIDAD_SESIONES_DEV'
     QA: 'TBL_GREIP_SEGURIDAD_SESIONES_QA'
     PROD: 'TBL_GREIP_SEGURIDAD_SESIONES_PROD'
-tablaAuditoria:
-    DEV: 'TBL_GREIP_SEGURIDAD_AUDITORIA_DEV'
-    QA: 'TBL_GREIP_SEGURIDAD_AUDITORIA_QA'
-    PROD: 'TBL_GREIP_SEGURIDAD_AUDITORIA_PROD'
 tablaMfa:
     DEV: 'TBL_GREIP_SEGURIDAD_MFA_DEV'
     QA: 'TBL_GREIP_SEGURIDAD_MFA_QA'
@@ -81,9 +77,12 @@ lmbEntityAudit:
     DEV: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
     QA: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
     PROD: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
-# ARN del DynamoDB Stream de USUARIOS para el procesador de auditoria.
-# Se regenera si la tabla se recrea (describe-table -> LatestStreamArn).
-dynamoStreamUsuarios:
-    DEV: 'arn:aws:dynamodb:us-east-2:918897411288:table/TBL_GREIP_USUARIOS_DEV/stream/2026-08-07T20:23:21.907'
-    QA: PENDIENTE
-    PROD: PENDIENTE
+# Cola SQS de auditoria (creada en infra/storage/storage.yml).
+sqsAuditUrl:
+    DEV: 'https://sqs.us-east-2.amazonaws.com/918897411288/greip-audit-dev'
+    QA: 'https://sqs.us-east-2.amazonaws.com/918897411288/greip-audit-qa'
+    PROD: 'https://sqs.us-east-2.amazonaws.com/918897411288/greip-audit-prod'
+sqsAuditArn:
+    DEV: 'arn:aws:sqs:us-east-2:918897411288:greip-audit-dev'
+    QA: 'arn:aws:sqs:us-east-2:918897411288:greip-audit-qa'
+    PROD: 'arn:aws:sqs:us-east-2:918897411288:greip-audit-prod'

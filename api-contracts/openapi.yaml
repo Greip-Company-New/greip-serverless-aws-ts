@@ -629,88 +629,6 @@ paths:
   # =========================================================
   # AUDIT (service-security)
   # =========================================================
-  /audit:
-    get:
-      tags: [Audit]
-      summary: Listar eventos de auditoría (paginado y filtros)
-      operationId: auditList
-      parameters:
-        - $ref: "#/components/parameters/Channel"
-        - $ref: "#/components/parameters/Page"
-        - $ref: "#/components/parameters/PageSize"
-        - name: dateFrom
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: Fecha inicial (ISO 8601)
-        - name: dateTo
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: Fecha final (ISO 8601)
-        - name: action
-          in: query
-          schema:
-            type: string
-            example: USER_CREATED
-          description: Filtro por acción (USER_LOGIN, USER_CREATED, ...)
-        - name: entity
-          in: query
-          schema:
-            type: string
-            enum: [USER, SESSION, ROLE, MFA, AUDIT]
-          description: Filtro por entidad
-        - name: actor
-          in: query
-          schema:
-            type: string
-          description: Filtro por actor (email o userId)
-      responses:
-        "200":
-          description: |
-            Lista paginada de eventos de auditoría. `data` es un array de `AuditEvent`
-            y `metadata.pagination` contiene la paginación.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuditListResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-
-  /audit/{sk}:
-    get:
-      tags: [Audit]
-      summary: Obtener un evento de auditoría por su sort key
-      operationId: auditGet
-      parameters:
-        - $ref: "#/components/parameters/Channel"
-        - name: sk
-          in: path
-          required: true
-          schema:
-            type: string
-            example: EVENT#2026-08-07T12:00:00.000Z#abc123
-          description: Sort key del evento (formato EVENT#<fechaISO>#<eventId>)
-      responses:
-        "200":
-          description: Evento de auditoría (`data` es un `AuditEvent`).
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuditGetResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
   /entity-audit:
     get:
       tags: [Audit]
@@ -746,6 +664,25 @@ paths:
             type: integer
           description: Tenant (empresa) al que pertenece el registro.
           example: 1
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtro por acción/evento (USER_CREATED, PRODUCT_CREATED, USER_LOGIN, ...).
+          example: PRODUCT_CREATED
+        - name: sourceIp
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtro por IP de origen de la petición.
+        - name: userAgent
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtro por user-agent (búsqueda parcial).
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
       responses:
@@ -1501,29 +1438,6 @@ components:
                 $ref: "#/components/schemas/Permission"
 
     # ===================== AUDIT =====================
-    AuditListResponse:
-      allOf:
-        - $ref: "#/components/schemas/ApiEnvelope"
-        - type: object
-          properties:
-            data:
-              type: array
-              items:
-                $ref: "#/components/schemas/AuditEvent"
-            metadata:
-              type: object
-              properties:
-                pagination:
-                  $ref: "#/components/schemas/Pagination"
-
-    AuditGetResponse:
-      allOf:
-        - $ref: "#/components/schemas/ApiEnvelope"
-        - type: object
-          properties:
-            data:
-              $ref: "#/components/schemas/AuditEvent"
-
     # ===================== ENTITY CHANGE LOG (service-security) =====================
     EntityChangeLogListResponse:
       allOf:
@@ -1560,8 +1474,14 @@ components:
           description: Tenant (empresa) al que pertenece el cambio.
         change_type:
           type: string
-          description: Tipo de cambio (CREATE, UPDATE, DELETE, ASSIGN, REMOVE).
+          nullable: true
+          description: Tipo de cambio de datos (CREATE, UPDATE, DELETE, ASSIGN, REMOVE). null en eventos de seguridad.
           example: UPDATE
+        action:
+          type: string
+          nullable: true
+          description: Acción/evento de seguridad (USER_CREATED, USER_LOGIN, PRODUCT_CREATED, PASSWORD_CHANGED, ...).
+          example: USER_CREATED
         status:
           type: string
           description: Estado resultante del registro (A=activo, I=inactivo).
@@ -1585,6 +1505,14 @@ components:
           type: string
           description: Canal desde el que se realizó el cambio.
           example: AppWeb
+        source_ip:
+          type: string
+          nullable: true
+          description: IP de origen de la petición.
+        user_agent:
+          type: string
+          nullable: true
+          description: User-Agent del cliente.
         changes:
           type: object
           description: |
@@ -1845,64 +1773,6 @@ components:
           type: string
           format: date-time
           description: Fecha/hora de la última actualización.
-
-    AuditEvent:
-      type: object
-      description: Evento de auditoría (DynamoDB TBL_GREIP_SEGURIDAD_AUDITORIA).
-      properties:
-        pk:
-          type: string
-          description: Partition key del evento (formato TENANT#<tenant>).
-          example: TENANT#GREIP
-        sk:
-          type: string
-          description: Sort key del evento (formato EVENT#<fechaISO>#<eventId>).
-          example: EVENT#2026-08-07T12:00:00.000Z#abc123
-        eventId:
-          type: string
-          description: Identificador único del evento.
-        tenant:
-          type: string
-          description: Código del tenant al que pertenece el evento.
-        action:
-          type: string
-          description: Acción registrada (USER_LOGIN, USER_CREATED, ...).
-          example: USER_CREATED
-        entity:
-          type: string
-          description: Tipo de entidad afectada.
-          enum: [USER, SESSION, ROLE, MFA, AUDIT]
-        entityId:
-          type: string
-          nullable: true
-          description: Identificador de la entidad afectada (opcional).
-        actor:
-          type: string
-          nullable: true
-          description: Usuario que ejecutó la acción (email o userId).
-        sourceIp:
-          type: string
-          nullable: true
-          description: IP de origen de la solicitud.
-        userAgent:
-          type: string
-          nullable: true
-          description: User-Agent del cliente.
-        detail:
-          type: object
-          nullable: true
-          description: Detalles adicionales del evento (varía por acción).
-        createdBy:
-          type: string
-          description: Email/userId que originó el evento.
-          example: admin@greip.com.pe
-        date:
-          type: string
-          format: date-time
-          description: Fecha/hora del evento (ISO 8601).
-        expiresAt:
-          type: integer
-          description: TTL (epoch segundos)
 
     Product:
       type: object

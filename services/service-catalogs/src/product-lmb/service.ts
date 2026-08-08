@@ -54,10 +54,11 @@ export default class Service {
                 createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM',
                 createdByChannel: channel
             });
-            Helpers.registerEntityChange({
+            await Helpers.registerEntityChange({
                 entity: 'product',
                 entityKey: product.productId,
                 tenantId,
+                action: 'PRODUCT_CREATED',
                 changeType: 'CREATE',
                 status: product.status,
                 userId: payload.identity?.sub || 'SYSTEM',
@@ -90,10 +91,11 @@ export default class Service {
             if (antes) {
                 const cambios = Helpers.buildEntityChanges(antes, product, PRODUCT_AUDIT_FIELDS);
                 if (Object.keys(cambios).length > 0) {
-                    Helpers.registerEntityChange({
+                    await Helpers.registerEntityChange({
                         entity: 'product',
                         entityKey: productId,
                         tenantId,
+                        action: 'PRODUCT_UPDATED',
                         changeType: 'UPDATE',
                         status: product.status,
                         userId: payload.identity?.sub || 'SYSTEM',
@@ -120,10 +122,11 @@ export default class Service {
             if (!eliminado) {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });
             }
-            Helpers.registerEntityChange({
+            await Helpers.registerEntityChange({
                 entity: 'product',
                 entityKey: productId,
                 tenantId,
+                action: 'PRODUCT_DELETED',
                 changeType: 'DELETE',
                 status: 'I',
                 userId: payload.identity?.sub || 'SYSTEM',

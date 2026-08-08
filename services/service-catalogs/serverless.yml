@@ -79,6 +79,7 @@ provider:
     SM_JWT_PUBLIC_KEY: 'Greip/JWT-Public'
     SM_ENCRIPTACION_TOKEN: 'Greip/Encriptacion/Token'
     LMB_ENTITY_AUDIT: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
+    SQS_AUDIT_QUEUE_URL: 'https://sqs.us-east-2.amazonaws.com/918897411288/greip-audit-dev'
     PROFILE_DEPLOYMENT: ${self:provider.profile}
     AWS_ACCOUNT: ${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}
 

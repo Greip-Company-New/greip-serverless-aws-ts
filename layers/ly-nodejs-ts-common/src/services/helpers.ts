@@ -2,6 +2,7 @@ import { ResponseFactory } from "src/models/reponse/response-factory.js";
 import { decryptAes, encryptAes } from "./aes.js";
 import { SecretsManagerService } from "./secretsmanager.js";
 import { LambdaService } from "./lambda.js";
+import { SQSService } from "./sqs.js";
 import { FORMATS, MESSAGES_ERROR } from "src/constants/ConstantCore.js";
 import { getDateNowFormat, getNewUuId } from "src/base/util.js";
 import { DynamoDBService } from "./dynamodb.js";
@@ -10,12 +11,16 @@ import jwt from 'jsonwebtoken';
 export interface EntityChangeInput {
   entity: string;
   entityKey: string | number;
-  tenantId?: number;
-  changeType: string;   // CREATE | UPDATE | DELETE | ASSIGN | REMOVE
+  tenant?: string;      // codigo del tenant (ej. GREIP)
+  tenantId?: number;    // id numerico del tenant (si ya se conoce)
+  changeType?: string;  // CREATE | UPDATE | DELETE | ASSIGN | REMOVE (cambios de datos)
+  action?: string;      // USER_LOGIN | USER_CREATED | PASSWORD_CHANGED ... (eventos de seguridad)
   status?: string;      // A | I
   userId?: string;
   channel?: string;
-  changes?: Record<string, any>; // { campo: { before, after } }
+  sourceIp?: string;
+  userAgent?: string;
+  changes?: Record<string, any>; // { campo: { before, after } } o detalle del evento
 }
 
 export class Helpers {
@@ -218,26 +223,17 @@ export class Helpers {
     }
 
     /**
-     * Registra un cambio de entidad en el historico de auditoria (entity_change_log)
-     * invocando por Lambda-to-Lambda el microservicio ENTITY_AUDIT_LMB.
+     * Encola un cambio/evento de entidad para el historico de auditoria.
+     * No bloquea el request: envia a la cola SQS (greip-audit-<env>) y la
+     * Lambda AUDIT_SYNC_LMB lo persiste en PostgreSQL (entity_change_log).
      */
     static async registerEntityChange(input: EntityChangeInput): Promise<void> {
-        const functionName = process.env.LMB_ENTITY_AUDIT || 'SRV-SECURITY-LMB-ENTITY-AUDIT';
-        const lambdaService = new LambdaService();
-        const result = await lambdaService.invokeLambda({
-            functionName,
-            payload: {
-                origin: 'LAMBDA_EVENT',
-                action: 'registerChange',
-                payload: input
-            }
+        const queueUrl = process.env.SQS_AUDIT_QUEUE_URL || 'https://sqs.us-east-2.amazonaws.com/918897411288/greip-audit-dev';
+        const sqsService = new SQSService();
+        await sqsService.sendMessage({
+            queueUrl,
+            messageBody: input
         });
-        const raw = typeof result.payload === 'string' ? JSON.parse(result.payload) : result.payload;
-        const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        const inner = data?.payload;
-        if (!inner || inner.success === false) {
-            throw new Error(`Error registrando auditoria de ${input.entity}: ${inner?.message || 'respuesta invalida'}`);
-        }
     }
 
 }

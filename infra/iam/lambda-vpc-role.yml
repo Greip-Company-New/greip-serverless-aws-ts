@@ -104,6 +104,19 @@ Resources:
                 Action:
                   - lambda:InvokeFunction
                 Resource: '*'
+              # SQS: cola de auditoria (send desde las lambdas productoras,
+              # receive/delete desde AUDIT_SYNC_LMB) + DLQ
+              - Sid: GreipSqsAuditoria
+                Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:GetQueueUrl
+                  - sqs:ChangeMessageVisibility
+                Resource:
+                  - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:greip-audit-*'
               # CloudWatch: metricas de funciones Lambda
               - Sid: GreipCloudWatch
                 Effect: Allow

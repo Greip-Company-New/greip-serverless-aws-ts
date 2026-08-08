@@ -39,6 +39,7 @@ Contrato OpenAPI 3.0.3 y colección Postman de las APIs de GREIP COMPANY (DEV).
    - `User > Create user` (guarda `userId`), `Role > Create role` (guarda `roleId`).
    - `User > Assign roles`, `User > Get user permissions`, etc.
    - `Product > Create product` (guarda `productId`) y el resto de CRUD (requieren el `token` en `Authorization: Bearer`).
+   - `Audit > Get entity change log` para ver el historial de cambios de una entidad.
    - `service-cross > Notification` (email/SMS) y `Crypto` (encrypt/decrypt de data de token).
 
 ## Formato de respuesta
@@ -74,5 +75,5 @@ Para una validación estructural completa (reglas OpenAPI) se puede usar `@apide
 
 ## Convención de nomenclatura
 
-- Rutas y atributos en **inglés**: `/user`, `/role`, `/permission`, `/audit`, `/product`, `documentType`, `firstName`, `status`, `page`, `pageSize`, etc.
+- Rutas y atributos en **inglés**: `/user`, `/role`, `/permission`, `/entity-audit`, `/product`, `documentType`, `firstName`, `status`, `page`, `pageSize`, etc.
 - Mensajes y descripciones al usuario final en **español**.

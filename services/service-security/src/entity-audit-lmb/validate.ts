@@ -8,6 +8,9 @@ export default class Validate {
       entity: Joi.string().max(100).required(),
       entityKey: Joi.string().max(100).required(),
       tenantId: Joi.number().integer().min(1).required(),
+      action: Joi.string().max(50).optional().empty(''),
+      sourceIp: Joi.string().max(45).optional().empty(''),
+      userAgent: Joi.string().max(500).optional().empty(''),
       page: Joi.number().integer().min(1).optional(),
       pageSize: Joi.number().integer().min(1).max(100).optional(),
       headers: Joi.object().optional().unknown(true)

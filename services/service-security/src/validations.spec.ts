@@ -1,6 +1,5 @@
 import AuthValidate from './auth-lmb/validate';
 import UsuarioValidate from './usuario-lmb/validate';
-import AuditValidate from './audit-lmb/validate';
 
 describe('auth-lmb/validate', () => {
   const headers = { channel: 'AppWeb' };
@@ -55,17 +54,5 @@ describe('usuario-lmb/validate', () => {
         fatherLastName: 'Perez'
       })
     ).rejects.toBeTruthy();
-  });
-});
-
-describe('audit-lmb/validate', () => {
-  it('acepta listAudit con filtros', async () => {
-    await expect(AuditValidate.listAudit({ dateFrom: '2026-01-01T00:00:00.000Z' })).resolves.toBeUndefined();
-    await expect(AuditValidate.listAudit({ dateFrom: 'no-es-fecha' })).rejects.toBeTruthy();
-  });
-
-  it('valida getAudit con sk', async () => {
-    await expect(AuditValidate.getAudit({ sk: 'EVENT#2026-01-01T00:00:00.000Z#abc' })).resolves.toBeUndefined();
-    await expect(AuditValidate.getAudit({})).rejects.toBeTruthy();
   });
 });

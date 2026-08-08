@@ -26,12 +26,15 @@ export interface EntityChangeLogRow {
   entity_key: string;
   tenant_id: number;
   change_type: string;
+  action?: string | null;
   status: string;
   user_id: string;
   user_first_name?: string | null;
   user_father_last_name?: string | null;
   user_mother_last_name?: string | null;
   channel: string;
+  source_ip?: string | null;
+  user_agent?: string | null;
   changes: Record<string, any>;
   created_at: string;
 }

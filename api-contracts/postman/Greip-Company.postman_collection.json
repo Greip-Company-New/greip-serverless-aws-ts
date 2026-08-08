@@ -756,69 +756,6 @@
       "name": "service-security / Audit",
       "item": [
         {
-          "name": "List audit",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "channel",
-                "value": "{{canal}}"
-              },
-              {
-                "key": "x-api-key",
-                "value": "{{ak-service-security}}"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{api-server}}/srv-security/audit",
-              "host": [
-                "{{api-server}}"
-              ],
-              "path": [
-                "srv-security",
-                "audit"
-              ]
-            },
-            "description": "Lista eventos de auditoría (filtros por fecha, action, entity, actor)."
-          }
-        },
-        {
-          "name": "Get audit event",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "channel",
-                "value": "{{canal}}"
-              },
-              {
-                "key": "x-api-key",
-                "value": "{{ak-service-security}}"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{api-server}}/srv-security/audit/{{sk}}",
-              "host": [
-                "{{api-server}}"
-              ],
-              "path": [
-                "srv-security",
-                "audit",
-                "{{sk}}"
-              ]
-            },
-            "description": "Obtiene un evento de auditoría por su sort key (EVENT#fecha#id)."
-          }
-        },
-        {
           "name": "Get entity change log",
           "request": {
             "method": "GET",
@@ -837,7 +774,7 @@
               }
             ],
             "url": {
-              "raw": "{{api-server}}/srv-security/entity-audit?entity=product&entityKey={{productId}}&tenantId=1",
+              "raw": "{{api-server}}/srv-security/entity-audit?entity={{entity}}&entityKey={{entityKey}}&tenantId={{tenantId}}",
               "host": [
                 "{{api-server}}"
               ],
@@ -857,6 +794,21 @@
                 {
                   "key": "tenantId",
                   "value": "1"
+                },
+                {
+                  "key": "action",
+                  "value": "",
+                  "description": "Filtro por accion/evento (ej. PRODUCT_CREATED)"
+                },
+                {
+                  "key": "sourceIp",
+                  "value": "",
+                  "description": "Filtro por IP de origen"
+                },
+                {
+                  "key": "userAgent",
+                  "value": "",
+                  "description": "Filtro por user-agent"
                 }
               ]
             }

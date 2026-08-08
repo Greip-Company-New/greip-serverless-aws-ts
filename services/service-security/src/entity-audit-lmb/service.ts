@@ -1,17 +1,12 @@
 import { PostgresDatabaseService } from 'ly-nodejs-ts-postgresdb';
-import { EntityChangeRecord, EntityChangeLogRow } from './models';
+import { EntityChangeLogRow } from './models';
 
 const db = new PostgresDatabaseService(process.env.PG_SECRET_DB || 'Greip/postgres/dev');
 
-const INSERT_CHANGE_QUERY = `
-INSERT INTO greip.entity_change_log
-    (entity, entity_key, tenant_id, change_type, status, user_id, channel, changes)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
-RETURNING id, entity, entity_key, tenant_id, change_type, status, user_id, channel, changes, created_at`;
-
 const LIST_CHANGES_QUERY = `
-SELECT ecl.id, ecl.entity, ecl.entity_key, ecl.tenant_id, ecl.change_type, ecl.status,
-       ecl.user_id, ecl.channel, ecl.changes, ecl.created_at,
+SELECT ecl.id, ecl.entity, ecl.entity_key, ecl.tenant_id, ecl.change_type, ecl.action,
+       ecl.status, ecl.user_id, ecl.channel, ecl.source_ip, ecl.user_agent,
+       ecl.changes, ecl.created_at,
        p.first_name AS user_first_name,
        p.father_last_name AS user_father_last_name,
        p.mother_last_name AS user_mother_last_name
@@ -21,15 +16,32 @@ SELECT ecl.id, ecl.entity, ecl.entity_key, ecl.tenant_id, ecl.change_type, ecl.s
  WHERE ecl.entity = $1
    AND ecl.entity_key = $2
    AND ecl.tenant_id = $3
+   AND ($4::text IS NULL OR ecl.action = $4)
+   AND ($5::text IS NULL OR ecl.source_ip = $5)
+   AND ($6::text IS NULL OR ecl.user_agent ILIKE '%' || $6 || '%')
  ORDER BY ecl.id DESC
- LIMIT $4 OFFSET $5`;
+ LIMIT $7 OFFSET $8`;
 
 const COUNT_CHANGES_QUERY = `
 SELECT COUNT(*)::int AS total
   FROM greip.entity_change_log
  WHERE entity = $1
    AND entity_key = $2
-   AND tenant_id = $3`;
+   AND tenant_id = $3
+   AND ($4::text IS NULL OR action = $4)
+   AND ($5::text IS NULL OR source_ip = $5)
+   AND ($6::text IS NULL OR user_agent ILIKE '%' || $6 || '%')`;
+
+export interface ListChangesParams {
+  entity: string;
+  entityKey: string;
+  tenantId: number;
+  action?: string;
+  sourceIp?: string;
+  userAgent?: string;
+  page?: number;
+  pageSize?: number;
+}
 
 function mapRow(row: any): EntityChangeLogRow {
   return {
@@ -38,12 +50,15 @@ function mapRow(row: any): EntityChangeLogRow {
     entity_key: row.entity_key,
     tenant_id: row.tenant_id,
     change_type: row.change_type,
+    action: row.action || null,
     status: row.status,
     user_id: row.user_id,
     user_first_name: row.user_first_name || null,
     user_father_last_name: row.user_father_last_name || null,
     user_mother_last_name: row.user_mother_last_name || null,
     channel: row.channel,
+    source_ip: row.source_ip || null,
+    user_agent: row.user_agent || null,
     changes: row.changes,
     created_at: row.created_at
   };
@@ -51,35 +66,16 @@ function mapRow(row: any): EntityChangeLogRow {
 
 export default class Service {
 
-  static async registerChange(payload: EntityChangeRecord): Promise<EntityChangeLogRow> {
-    const changesJson = payload.changes && Object.keys(payload.changes).length > 0
-      ? JSON.stringify(payload.changes)
-      : '{}';
-    const row = await db.executeOne<EntityChangeLogRow>(INSERT_CHANGE_QUERY, [
-      payload.entity,
-      payload.entityKey,
-      payload.tenantId,
-      payload.changeType,
-      payload.status || 'A',
-      payload.userId || 'SYSTEM',
-      payload.channel || 'SYSTEM',
-      changesJson
-    ]);
-    if (!row) {
-      throw new Error('No se pudo registrar el cambio');
-    }
-    return mapRow(row);
-  }
-
-  static async listChanges(params: { entity: string; entityKey: string; tenantId: number; page?: number; pageSize?: number }): Promise<{ data: EntityChangeLogRow[]; total: number }> {
+  static async listChanges(params: ListChangesParams): Promise<{ data: EntityChangeLogRow[]; total: number }> {
     const page = Number(params.page) || 1;
     const pageSize = Math.min(Number(params.pageSize) || 10, 100);
     const offset = (page - 1) * pageSize;
+    const filtros = [params.action || null, params.sourceIp || null, params.userAgent || null];
 
-    const countResult = await db.execute<{ total: number }>(COUNT_CHANGES_QUERY, [params.entity, params.entityKey, params.tenantId]);
+    const countResult = await db.execute<{ total: number }>(COUNT_CHANGES_QUERY, [params.entity, params.entityKey, params.tenantId, ...filtros]);
     const total = countResult.rows[0]?.total || 0;
 
-    const result = await db.execute<EntityChangeLogRow>(LIST_CHANGES_QUERY, [params.entity, params.entityKey, params.tenantId, pageSize, offset]);
+    const result = await db.execute<EntityChangeLogRow>(LIST_CHANGES_QUERY, [params.entity, params.entityKey, params.tenantId, ...filtros, pageSize, offset]);
     return { data: result.rows.map(mapRow), total };
   }
 

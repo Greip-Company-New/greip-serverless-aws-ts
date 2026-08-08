@@ -1,12 +1,11 @@
 // Servicio de autenticacion: login, MFA, refresh, logout, recuperacion de contrasena.
-import { LambdaService } from 'ly-nodejs-ts-common';
+import { LambdaService, Helpers } from 'ly-nodejs-ts-common';
 import { UsuarioRepository } from '../common/repositories/dynamodb/usuario';
 import { SesionService } from '../common/sesion-service';
 import { MfaService } from '../common/mfa-service';
 import { UsuarioService } from '../common/usuario-service';
 import { verifyPassword } from '../common/password';
 import { firmarToken, verificarToken } from '../common/token';
-import { registerAudit } from '../common/audit';
 import { UsuarioDynamo } from '../common/models';
 import {
   MAX_LOGIN_ATTEMPTS,
@@ -44,6 +43,20 @@ export default class AuthService {
     };
   }
 
+  private registrarEvento(params: any, tenant: string, channel: string = ''): Promise<void> {
+    return Helpers.registerEntityChange({
+      entity: params.entity,
+      entityKey: params.entityId || params.actor || 'SYSTEM',
+      tenant,
+      action: params.action,
+      userId: params.actor,
+      channel: channel || 'SYSTEM',
+      sourceIp: params.sourceIp,
+      userAgent: params.userAgent,
+      changes: params.detail || {}
+    }).catch((err) => console.error('[entity-audit] evento fallo', err));
+  }
+
   private mfaActive(usuario: UsuarioDynamo): boolean {
     const mfa = usuario.mfa || {};
     return Boolean(mfa.totp?.active || mfa.sms?.active || mfa.email?.active);
@@ -64,9 +77,9 @@ export default class AuthService {
         : null;
 
     if (!usuario) {
-      await registerAudit(
+      await this.registrarEvento(
         { action: AUDIT_EVENTS.LOGIN_FAILED, entity: 'USER', entityId: email || `${documentType}#${documentNumber}`, actor: email, sourceIp: ip, userAgent, detail: { motivo: 'usuario no encontrado' } },
-        process.env.TENANT_DEFAULT || 'GREIP'
+        process.env.TENANT_DEFAULT || 'GREIP', channelHeader
       );
       throw new Error('Credenciales invalidas');
     }
@@ -86,14 +99,14 @@ export default class AuthService {
         campos.failedAttempts = 0;
       }
       await this.usuarioRepo.actualizar(usuario.userId, campos);
-      await registerAudit(
+      await this.registrarEvento(
         { action: AUDIT_EVENTS.LOGIN_FAILED, entity: 'USER', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent, detail: { intento: intentos } },
-        usuario.tenant
+        usuario.tenant, channelHeader
       );
       if (campos.lockedUntil) {
-        await registerAudit(
+        await this.registrarEvento(
           { action: AUDIT_EVENTS.LOCKED, entity: 'USER', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
-          usuario.tenant
+          usuario.tenant, channelHeader
         );
       }
       throw new Error('Credenciales invalidas');
@@ -123,9 +136,9 @@ export default class AuthService {
     const permissions = await this.usuarioService.getUserPermissions(usuario.userId);
     const roles = await this.usuarioService.getUserRoles(usuario.userId);
     const resultado = await this.sesionService.startSession(usuario, { permissions, roles, userAgent, ip, channel: channelHeader });
-    await registerAudit(
+    await this.registrarEvento(
       { action: AUDIT_EVENTS.LOGIN_SUCCESS, entity: 'USER', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent, detail: { canal: channelHeader } },
-      usuario.tenant
+      usuario.tenant, channelHeader
     );
     return resultado;
   }
@@ -151,9 +164,9 @@ export default class AuthService {
 
     const valido = await this.mfaService.verifyCode(usuario.tenant, usuario.userId, challengeId, code);
     if (!valido) {
-      await registerAudit(
+      await this.registrarEvento(
         { action: AUDIT_EVENTS.MFA_FAILED, entity: 'MFA', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
-        usuario.tenant
+        usuario.tenant, channelHeader
       );
       throw new Error('Codigo de verificacion invalido');
     }
@@ -161,9 +174,9 @@ export default class AuthService {
     const permissions = await this.usuarioService.getUserPermissions(usuario.userId);
     const roles = await this.usuarioService.getUserRoles(usuario.userId);
     const resultado = await this.sesionService.startSession(usuario, { permissions, roles, userAgent, ip, channel: channelHeader });
-    await registerAudit(
+    await this.registrarEvento(
       { action: AUDIT_EVENTS.MFA_VERIFIED, entity: 'MFA', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent, detail: { canal: channelHeader } },
-      usuario.tenant
+      usuario.tenant, channelHeader
     );
     return resultado;
   }
@@ -176,15 +189,15 @@ export default class AuthService {
 
   async logout(payload: any, identity: any): Promise<any> {
     const { refreshToken, logoutAll } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
     if (!refreshToken) {
       throw new Error('refreshToken es obligatorio');
     }
     await this.sesionService.closeSession(refreshToken, Boolean(logoutAll));
     if (identity) {
-      await registerAudit(
+      await this.registrarEvento(
         { action: AUDIT_EVENTS.LOGOUT, entity: 'SESSION', entityId: identity.sub, actor: identity.sub, sourceIp: ip, userAgent },
-        identity.tenant
+        identity.tenant, channelHeader
       );
     }
     return { logout: true };
@@ -192,21 +205,21 @@ export default class AuthService {
 
   async changePassword(payload: any, identity: any): Promise<any> {
     const { currentPassword, newPassword } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
     if (!identity) {
       throw new Error('No autenticado');
     }
     await this.usuarioService.changePassword(identity.sub, currentPassword, newPassword);
-    await registerAudit(
+    await this.registrarEvento(
       { action: AUDIT_EVENTS.PASSWORD_CHANGED, entity: 'USER', entityId: identity.sub, actor: identity.sub, sourceIp: ip, userAgent },
-      identity.tenant
+      identity.tenant, channelHeader
     );
     return { passwordUpdated: true };
   }
 
   async requestRecovery(payload: any): Promise<any> {
     const { email } = payload;
-    const { requestId } = this.ctx(payload);
+    const { requestId, channel: channelHeader } = this.ctx(payload);
     const usuario = email ? await this.usuarioRepo.getByEmail(email) : null;
 
     if (usuario && usuario.status === STATUS_ACTIVE) {
@@ -215,9 +228,9 @@ export default class AuthService {
         RESET_TOKEN_TTL_MIN
       );
       await this.sendRecoveryEmail(usuario, resetToken, requestId);
-      await registerAudit(
+      await this.registrarEvento(
         { action: AUDIT_EVENTS.RECOVERY_REQUESTED, entity: 'USER', entityId: usuario.userId, actor: usuario.email },
-        usuario.tenant
+        usuario.tenant, channelHeader
       );
     }
 
@@ -247,7 +260,7 @@ export default class AuthService {
 
   async resetPassword(payload: any): Promise<any> {
     const { resetToken, newPassword } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
 
     let identidad: any;
     try {
@@ -265,9 +278,9 @@ export default class AuthService {
     }
 
     await this.usuarioService.resetPassword(usuario.userId, newPassword);
-    await registerAudit(
+    await this.registrarEvento(
       { action: AUDIT_EVENTS.PASSWORD_RESET, entity: 'USER', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
-      usuario.tenant
+      usuario.tenant, channelHeader
     );
     return { passwordUpdated: true };
   }
