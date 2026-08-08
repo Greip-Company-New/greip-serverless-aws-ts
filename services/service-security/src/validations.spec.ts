@@ -26,8 +26,9 @@ describe('auth-lmb/validate', () => {
   });
 
   it('valida verifyMfa con code de 6 digitos', async () => {
-    await expect(AuthValidate.verifyMfa({ mfaToken: 't', challengeId: 'd', code: '123456' })).resolves.toBeUndefined();
-    await expect(AuthValidate.verifyMfa({ mfaToken: 't', challengeId: 'd', code: '123' })).rejects.toBeTruthy();
+    const headers = { channel: 'AppWeb' };
+    await expect(AuthValidate.verifyMfa({ mfaToken: 't', challengeId: 'd', code: '123456', headers })).resolves.toBeUndefined();
+    await expect(AuthValidate.verifyMfa({ mfaToken: 't', challengeId: 'd', code: '123', headers })).rejects.toBeTruthy();
   });
 });
 

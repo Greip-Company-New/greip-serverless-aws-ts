@@ -2,6 +2,7 @@
 // Valida el access token y expone payload.identity. Reutilizable desde
 // cualquier Lambda que requiera validacion de token.
 import { verifyToken } from '../services/token.service.js';
+import { CANALES } from '../constants/ConstantCore.js';
 
 export interface AuthMiddlewareOptions {
   exclude?: string[];
@@ -48,6 +49,11 @@ export default function AuthMiddleware(options: AuthMiddlewareOptions = {}) {
       const requestChannel = authChannelFromHeaders(headers);
       if (!requestChannel) {
         const err = new Error(JSON.stringify({ success: false, statusCode: 400, message: 'Header channel es obligatorio' }));
+        (err as any).httpStatus = 400;
+        throw err;
+      }
+      if (!CANALES.includes(requestChannel)) {
+        const err = new Error(JSON.stringify({ success: false, statusCode: 400, message: `Canal ${requestChannel} no permitido. Validos: ${CANALES.join(', ')}` }));
         (err as any).httpStatus = 400;
         throw err;
       }

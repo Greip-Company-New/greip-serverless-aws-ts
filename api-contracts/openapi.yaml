@@ -16,12 +16,12 @@ info:
       `Authorization: Bearer <accessToken>` (JWT RS256). El `createdBy`/`updatedBy` de los
       productos se toma del `sub` (userId) del token, y el `tenantId` (aislamiento por empresa)
       se toma del `tenantId` incluido en el token — nunca del request del cliente.
-    - **Multicanal**: el canal es **obligatorio** y se envía por header `channel`
-      (valores: `AppWeb`, `AppMovil`, `Chatbot`, `Whatsapp`, `Web`, `Portal`, `App`).
-      El access token se genera con el canal del login y **solo es válido para ese canal**:
-      si un token emitido para `AppMovil` se usa con header `channel: AppWeb`, se rechaza
-      con 401. El canal se persiste en los atributos de auditoría `createdByChannel` /
-      `updatedByChannel` de cada entidad.
+    - **Multicanal**: el canal es **obligatorio** y se envía **solo por header** `channel`
+      (valores permitidos: `AppWeb`, `AppMovil`, `Chatbot`, `Whatsapp`). No se acepta en
+      body, query ni path. El access token se genera con el canal del login y **solo es
+      válido para ese canal**: si un token emitido para `AppMovil` se usa con header
+      `channel: AppWeb`, se rechaza con 401. El canal se persiste en los atributos de
+      auditoría `createdByChannel` / `updatedByChannel` de cada entidad.
 
     **Envoltorio de respuestas:**
     - En **éxito** (200/201) el body es el objeto `Response` directamente:
@@ -1033,8 +1033,8 @@ components:
       required: true
       schema:
         type: string
-        enum: [AppWeb, AppMovil, Chatbot, Whatsapp, Web, Portal, App]
-      description: Canal desde el que se consume la API. Obligatorio; el token solo es válido para el canal con el que fue generado.
+        enum: [AppWeb, AppMovil, Chatbot, Whatsapp]
+      description: Canal desde el que se consume la API. Obligatorio y solo por header (nunca en body/query/path); el token solo es válido para el canal con el que fue generado.
     Page:
       name: page
       in: query

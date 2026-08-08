@@ -130,9 +130,6 @@ export const CODIGO_TELEFONO_PAIS = {
 }
 
 export const CANALES = [
-  'Web',
-  'Portal',
-  'App',
   'AppWeb',
   'AppMovil',
   'Chatbot',

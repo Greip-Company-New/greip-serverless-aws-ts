@@ -43,9 +43,9 @@ profile:
     QA: 'qaGreipCompany'
     PROD: 'prodGreipCompany'
 lyCommonNew:
-    DEV: 2
-    QA: 2
-    PROD: 2
+    DEV: 3
+    QA: 3
+    PROD: 3
 lyPgNew:
     DEV: 1
     QA: 1

@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { CANALES } from 'ly-nodejs-ts-common';
 
 export default class Validate {
   static async login(payload: any): Promise<void> {
@@ -19,6 +20,9 @@ export default class Validate {
     if (!headerChannel) {
       throw ['Header channel es obligatorio'];
     }
+    if (!CANALES.includes(headerChannel)) {
+      throw [`Canal ${headerChannel} no permitido. Validos: ${CANALES.join(', ')}`];
+    }
   }
 
   static async verifyMfa(payload: any): Promise<void> {
@@ -31,6 +35,7 @@ export default class Validate {
     });
 
     await this.validar(schema, payload);
+    await this.validarChannel(payload);
   }
 
   static async refreshToken(payload: any): Promise<void> {
@@ -41,6 +46,7 @@ export default class Validate {
     });
 
     await this.validar(schema, payload);
+    await this.validarChannel(payload);
   }
 
   static async logout(payload: any): Promise<void> {
@@ -52,6 +58,7 @@ export default class Validate {
     });
 
     await this.validar(schema, payload);
+    await this.validarChannel(payload);
   }
 
   static async changePassword(payload: any): Promise<void> {
@@ -63,6 +70,7 @@ export default class Validate {
     });
 
     await this.validar(schema, payload);
+    await this.validarChannel(payload);
   }
 
   static async requestRecovery(payload: any): Promise<void> {
@@ -73,6 +81,7 @@ export default class Validate {
     });
 
     await this.validar(schema, payload);
+    await this.validarChannel(payload);
   }
 
   static async resetPassword(payload: any): Promise<void> {
@@ -84,6 +93,18 @@ export default class Validate {
     });
 
     await this.validar(schema, payload);
+    await this.validarChannel(payload);
+  }
+
+  private static async validarChannel(payload: any): Promise<void> {
+    const headers = payload?.headers || {};
+    const headerChannel = headers['channel'] || headers['Channel'] || headers['Canal'] || headers['canal'] || '';
+    if (!headerChannel) {
+      throw ['Header channel es obligatorio'];
+    }
+    if (!CANALES.includes(headerChannel)) {
+      throw [`Canal ${headerChannel} no permitido. Validos: ${CANALES.join(', ')}`];
+    }
   }
 
   private static async validar(schema: Joi.ObjectSchema, payload: any): Promise<void> {

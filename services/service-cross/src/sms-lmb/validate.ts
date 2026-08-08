@@ -5,7 +5,6 @@ export default class Validate {
   static async sendSms(payload: any): Promise<void> {
     const schema = Joi.object({
       requestId: Joi.string().optional(),
-      canal: Joi.string().optional(),
       phoneNumber: Joi.string().pattern(/^\+?[0-9]{9,15}$/).required(),
       message: Joi.string().max(1600).required(),
       headers: Joi.object().optional().unknown(true),

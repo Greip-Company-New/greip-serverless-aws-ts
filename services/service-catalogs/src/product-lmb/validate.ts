@@ -1,5 +1,4 @@
 import Joi from 'joi';
-import { CANALES } from 'ly-nodejs-ts-common';
 import { PRODUCT_STATUS, CURRENCIES } from './constants';
 
 export default class Validate {
@@ -7,7 +6,6 @@ export default class Validate {
   static async listProducts(payload: any): Promise<void> {
     const schema = Joi.object({
       requestId: Joi.string().optional(),
-      canal: Joi.string().valid(...CANALES).optional(),
       page: Joi.number().integer().min(1).optional(),
       pageSize: Joi.number().integer().min(1).max(100).optional(),
       status: Joi.string().valid(...PRODUCT_STATUS).optional().empty(''),
@@ -28,7 +26,6 @@ export default class Validate {
   static async getProduct(payload: any): Promise<void> {
     const schema = Joi.object({
       requestId: Joi.string().optional(),
-      canal: Joi.string().valid(...CANALES).optional(),
       productId: Joi.number().integer().min(1).required(),
       headers: Joi.object().optional().unknown(true),
     });
@@ -46,7 +43,6 @@ export default class Validate {
   static async createProduct(payload: any): Promise<void> {
     const schema = Joi.object({
       requestId: Joi.string().optional(),
-      canal: Joi.string().valid(...CANALES).optional(),
       createdBy: Joi.string().optional().empty(''),
       name: Joi.string().required(),
       description: Joi.string().max(500).allow(null).optional().empty(''),
@@ -69,7 +65,6 @@ export default class Validate {
   static async updateProduct(payload: any): Promise<void> {
     const schema = Joi.object({
       requestId: Joi.string().optional(),
-      canal: Joi.string().valid(...CANALES).optional(),
       productId: Joi.number().integer().min(1).required(),
       createdBy: Joi.string().optional().empty(''),
       name: Joi.string().required(),
@@ -93,7 +88,6 @@ export default class Validate {
   static async deleteProduct(payload: any): Promise<void> {
     const schema = Joi.object({
       requestId: Joi.string().optional(),
-      canal: Joi.string().valid(...CANALES).optional(),
       productId: Joi.number().integer().min(1).required(),
       headers: Joi.object().optional().unknown(true),
     });
