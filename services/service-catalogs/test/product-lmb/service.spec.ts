@@ -1,9 +1,6 @@
 import Service from '../../src/product-lmb/service';
 import { Repository } from '../../src/product-lmb/repository';
-
-jest.mock('../../src/product-lmb/entity-audit-client', () => ({
-  registerEntityChange: jest.fn().mockResolvedValue(undefined)
-}));
+import { Helpers } from 'ly-nodejs-ts-common';
 
 describe('Service product-lmb', () => {
   const producto = {
@@ -21,6 +18,10 @@ describe('Service product-lmb', () => {
   };
 
   const identity = { sub: 'user-1', tenant: 'GREIP', tenantId: 1, type: 'ACCESS' };
+
+  beforeEach(() => {
+    jest.spyOn(Helpers, 'registerEntityChange').mockResolvedValue(undefined);
+  });
 
   afterEach(() => {
     jest.restoreAllMocks();

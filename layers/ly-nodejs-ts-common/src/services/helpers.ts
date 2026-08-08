@@ -7,6 +7,17 @@ import { getDateNowFormat, getNewUuId } from "src/base/util.js";
 import { DynamoDBService } from "./dynamodb.js";
 import jwt from 'jsonwebtoken';
 
+export interface EntityChangeInput {
+  entity: string;
+  entityKey: string | number;
+  tenantId?: number;
+  changeType: string;   // CREATE | UPDATE | DELETE | ASSIGN | REMOVE
+  status?: string;      // A | I
+  userId?: string;
+  channel?: string;
+  changes?: Record<string, any>; // { campo: { before, after } }
+}
+
 export class Helpers {
     static obtenerUltimaFechaTrimestral(year: number, month: number) {
         let numMesTrimestrales = [12, 9, 6, 3];
@@ -188,6 +199,27 @@ export class Helpers {
         console.log('LoggerId >>>> ', loggerPayload.id);
     }
 
-
+    /**
+     * Registra un cambio de entidad en el historico de auditoria (entity_change_log)
+     * invocando por Lambda-to-Lambda el microservicio ENTITY_AUDIT_LMB.
+     */
+    static async registerEntityChange(input: EntityChangeInput): Promise<void> {
+        const functionName = process.env.LMB_ENTITY_AUDIT || 'SRV-SECURITY-LMB-ENTITY-AUDIT';
+        const lambdaService = new LambdaService();
+        const result = await lambdaService.invokeLambda({
+            functionName,
+            payload: {
+                origin: 'LAMBDA_EVENT',
+                action: 'registerChange',
+                payload: input
+            }
+        });
+        const raw = typeof result.payload === 'string' ? JSON.parse(result.payload) : result.payload;
+        const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const inner = data?.payload;
+        if (!inner || inner.success === false) {
+            throw new Error(`Error registrando auditoria de ${input.entity}: ${inner?.message || 'respuesta invalida'}`);
+        }
+    }
 
 }

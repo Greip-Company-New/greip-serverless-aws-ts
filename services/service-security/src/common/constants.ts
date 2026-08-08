@@ -17,11 +17,6 @@ export const TOKEN_TYPE_MFA = 'MFA';
 export const TOKEN_TYPE_RESET = 'RESET';
 export const TOKEN_TYPE_REFRESH = 'REFRESH';
 
-// Paginacion
-export const DEFAULT_PAGE = 1;
-export const DEFAULT_PAGE_SIZE = 10;
-export const MAX_PAGE_SIZE = 100;
-
 // Duraciones (en minutos) de tokens JWT
 export const ACCESS_TOKEN_TTL_MIN = 15;
 export const MFA_TOKEN_TTL_MIN = 5;

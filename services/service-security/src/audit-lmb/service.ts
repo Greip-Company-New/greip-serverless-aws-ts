@@ -1,7 +1,7 @@
 // Servicio de consulta de auditoria.
 import { AuditoriaRepository } from '../common/repositories/dynamodb/auditoria';
 import { AuditoriaEvento } from '../common/models';
-import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from '../common/constants';
+import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from 'ly-nodejs-ts-common';
 
 const SK_PREFIX = 'EVENT#';
 

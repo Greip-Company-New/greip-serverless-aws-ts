@@ -1,7 +1,5 @@
-import { ResponseFactory } from 'ly-nodejs-ts-common';
+import { ResponseFactory, Helpers, DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from 'ly-nodejs-ts-common';
 import { Repository } from './repository';
-import { registerEntityChange } from './entity-audit-client';
-import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from './constants';
 
 function tenantIdFromIdentity(payload: any): number {
   const tenantId = payload.identity?.tenantId;
@@ -55,7 +53,7 @@ export default class Service {
                 createdBy: payload.identity?.sub || payload.createdBy || 'SYSTEM',
                 createdByChannel: channel
             });
-            registerEntityChange({
+            Helpers.registerEntityChange({
                 entity: 'product',
                 entityKey: product.productId,
                 tenantId,
@@ -103,7 +101,7 @@ export default class Service {
                     }
                 }
                 if (Object.keys(cambios).length > 0) {
-                    registerEntityChange({
+                    Helpers.registerEntityChange({
                         entity: 'product',
                         entityKey: productId,
                         tenantId,
@@ -133,7 +131,7 @@ export default class Service {
             if (!eliminado) {
                 return ResponseFactory.notFound(`Producto no encontrado (id=${productId})`, { productId });
             }
-            registerEntityChange({
+            Helpers.registerEntityChange({
                 entity: 'product',
                 entityKey: productId,
                 tenantId,

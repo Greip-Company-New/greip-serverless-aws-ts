@@ -1,8 +1,8 @@
 // Servicio de usuarios y RBAC.
 import { UsuarioService } from '../common/usuario-service';
 import { registerAudit } from '../common/audit';
-import { registerEntityChange } from '../common/entity-audit-client';
-import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, AUDIT_EVENTS } from '../common/constants';
+import { Helpers, DEFAULT_PAGE, DEFAULT_PAGE_SIZE } from 'ly-nodejs-ts-common';
+import { AUDIT_EVENTS } from '../common/constants';
 
 export default class UsuarioLmbService {
   private usuarioService: UsuarioService;
@@ -36,7 +36,7 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
-    await registerEntityChange({
+    await Helpers.registerEntityChange({
       entity: 'user',
       entityKey: resultado.user.userId,
       tenantId: identity?.tenantId,
@@ -90,7 +90,7 @@ export default class UsuarioLmbService {
       const campo = (mapeo as any)[key] || key;
       cambios[campo] = { before: antes?.user?.[campo] ?? null, after: campos[key] };
     }
-    await registerEntityChange({
+    await Helpers.registerEntityChange({
       entity: 'user',
       entityKey: userId,
       tenantId: identity?.tenantId,
@@ -122,7 +122,7 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
-    await registerEntityChange({
+    await Helpers.registerEntityChange({
       entity: 'user',
       entityKey: userId,
       tenantId: identity?.tenantId,
@@ -173,7 +173,7 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
-    await registerEntityChange({
+    await Helpers.registerEntityChange({
       entity: 'user',
       entityKey: userId,
       tenantId: identity?.tenantId,
@@ -205,7 +205,7 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
-    await registerEntityChange({
+    await Helpers.registerEntityChange({
       entity: 'user',
       entityKey: userId,
       tenantId: identity?.tenantId,
@@ -242,7 +242,7 @@ export default class UsuarioLmbService {
       },
       process.env.TENANT_DEFAULT || 'GREIP'
     );
-    await registerEntityChange({
+    await Helpers.registerEntityChange({
       entity: 'role',
       entityKey: String(rol.id),
       tenantId: identity?.tenantId,
