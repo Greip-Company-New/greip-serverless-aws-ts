@@ -64,10 +64,10 @@ export default class Service {
                 userId: payload.identity?.sub || 'SYSTEM',
                 channel,
                 changes: {
-                    name: { antes: null, despues: product.name },
-                    description: { antes: null, despues: product.description || '' },
-                    price: { antes: null, despues: product.price },
-                    currency: { antes: null, despues: product.currency }
+                    name: { before: null, after: product.name },
+                    description: { before: null, after: product.description || '' },
+                    price: { before: null, after: product.price },
+                    currency: { before: null, after: product.currency }
                 }
             }).catch((err) => console.error('[entity-audit] createProduct fallo', err));
             return ResponseFactory.created(product, `Producto creado exitosamente (id=${product.productId})`);
@@ -99,7 +99,7 @@ export default class Service {
                     const vAntes = (antes as any)[campo];
                     const vDespues = (product as any)[campo];
                     if (String(vAntes ?? '') !== String(vDespues ?? '')) {
-                        cambios[campo] = { antes: vAntes, despues: vDespues };
+                        cambios[campo] = { before: vAntes, after: vDespues };
                     }
                 }
                 if (Object.keys(cambios).length > 0) {
@@ -142,12 +142,12 @@ export default class Service {
                 userId: payload.identity?.sub || 'SYSTEM',
                 channel,
                 changes: antes ? {
-                    name: { antes: antes.name, despues: null },
-                    description: { antes: antes.description || '', despues: null },
-                    price: { antes: antes.price, despues: null },
-                    currency: { antes: antes.currency, despues: null },
-                    status: { antes: antes.status, despues: 'I' }
-                } : { status: { antes: 'A', despues: 'I' } }
+                    name: { before: antes.name, after: null },
+                    description: { before: antes.description || '', after: null },
+                    price: { before: antes.price, after: null },
+                    currency: { before: antes.currency, after: null },
+                    status: { before: antes.status, after: 'I' }
+                } : { status: { before: 'A', after: 'I' } }
             }).catch((err) => console.error('[entity-audit] deleteProduct fallo', err));
             return ResponseFactory.deleted(`Producto eliminado exitosamente (id=${productId})`);
         } catch (err: any) {

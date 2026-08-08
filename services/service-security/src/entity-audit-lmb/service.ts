@@ -10,12 +10,18 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
 RETURNING id, entity, entity_key, tenant_id, change_type, status, user_id, channel, changes, created_at`;
 
 const LIST_CHANGES_QUERY = `
-SELECT id, entity, entity_key, tenant_id, change_type, status, user_id, channel, changes, created_at
-  FROM greip.entity_change_log
- WHERE entity = $1
-   AND entity_key = $2
-   AND tenant_id = $3
- ORDER BY id DESC
+SELECT ecl.id, ecl.entity, ecl.entity_key, ecl.tenant_id, ecl.change_type, ecl.status,
+       ecl.user_id, ecl.channel, ecl.changes, ecl.created_at,
+       p.first_name AS user_first_name,
+       p.father_last_name AS user_father_last_name,
+       p.mother_last_name AS user_mother_last_name
+  FROM greip.entity_change_log ecl
+  LEFT JOIN greip.user_person up ON up.user_id = ecl.user_id::uuid
+  LEFT JOIN greip.person p ON p.id = up.person_id
+ WHERE ecl.entity = $1
+   AND ecl.entity_key = $2
+   AND ecl.tenant_id = $3
+ ORDER BY ecl.id DESC
  LIMIT $4 OFFSET $5`;
 
 const COUNT_CHANGES_QUERY = `
@@ -34,6 +40,9 @@ function mapRow(row: any): EntityChangeLogRow {
     change_type: row.change_type,
     status: row.status,
     user_id: row.user_id,
+    user_first_name: row.user_first_name || null,
+    user_father_last_name: row.user_father_last_name || null,
+    user_mother_last_name: row.user_mother_last_name || null,
     channel: row.channel,
     changes: row.changes,
     created_at: row.created_at

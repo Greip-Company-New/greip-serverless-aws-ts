@@ -22,7 +22,7 @@ describe('entity-audit-lmb/service', () => {
     mockExecuteOne.mockResolvedValue({
       id: '1', entity: 'product', entity_key: '5', tenant_id: 1,
       change_type: 'UPDATE', status: 'A', user_id: 'user-1',
-      channel: 'AppWeb', changes: { name: { antes: 'Manzana', despues: 'Mansana' } },
+      channel: 'AppWeb', changes: { name: { before: 'Manzana', after: 'Mansana' } },
       created_at: '2026-08-08T00:15:45.119Z'
     });
 
@@ -34,7 +34,7 @@ describe('entity-audit-lmb/service', () => {
       status: 'A',
       userId: 'user-1',
       channel: 'AppWeb',
-      changes: { name: { antes: 'Manzana', despues: 'Mansana' } }
+      changes: { name: { before: 'Manzana', after: 'Mansana' } }
     });
 
     expect(row.id).toBe('1');
@@ -47,7 +47,7 @@ describe('entity-audit-lmb/service', () => {
     expect(params[4]).toBe('A');
     expect(params[5]).toBe('user-1');
     expect(params[6]).toBe('AppWeb');
-    expect(JSON.parse(params[7])).toEqual({ name: { antes: 'Manzana', despues: 'Mansana' } });
+    expect(JSON.parse(params[7])).toEqual({ name: { before: 'Manzana', after: 'Mansana' } });
   });
 
   it('usa SYSTEM como fallback de user y channel', async () => {
@@ -89,7 +89,8 @@ describe('entity-audit-lmb/service', () => {
       return Promise.resolve({ rows: [{
         id: '3', entity: 'product', entity_key: '5', tenant_id: 1,
         change_type: 'UPDATE', status: 'A', user_id: 'user-1',
-        channel: 'AppWeb', changes: { name: { antes: 'Mansana', despues: 'Manzana' } },
+        user_first_name: 'Juan', user_father_last_name: 'Perez', user_mother_last_name: 'Garcia',
+        channel: 'AppWeb', changes: { name: { before: 'Mansana', after: 'Manzana' } },
         created_at: '2026-08-08T00:15:45.119Z'
       }] });
     });
@@ -99,6 +100,9 @@ describe('entity-audit-lmb/service', () => {
     expect(result.total).toBe(1);
     expect(result.data).toHaveLength(1);
     expect(result.data[0].entity_key).toBe('5');
+    expect(result.data[0].user_first_name).toBe('Juan');
+    expect(result.data[0].user_father_last_name).toBe('Perez');
+    expect(result.data[0].user_mother_last_name).toBe('Garcia');
 
     // verifica que el COUNT use los 3 campos
     const countParams = mockExecute.mock.calls[0][1];

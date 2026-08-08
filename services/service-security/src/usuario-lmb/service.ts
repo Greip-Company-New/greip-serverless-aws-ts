@@ -45,11 +45,11 @@ export default class UsuarioLmbService {
       userId: identity?.sub || 'SYSTEM',
       channel,
       changes: {
-        email: { antes: null, despues: resultado.user.email },
-        documentType: { antes: null, despues: resultado.user.documentType },
-        documentNumber: { antes: null, despues: resultado.user.documentNumber },
-        firstName: { antes: null, despues: resultado.user.firstName },
-        fatherLastName: { antes: null, despues: resultado.user.fatherLastName }
+        email: { before: null, after: resultado.user.email },
+        documentType: { before: null, after: resultado.user.documentType },
+        documentNumber: { before: null, after: resultado.user.documentNumber },
+        firstName: { before: null, after: resultado.user.firstName },
+        fatherLastName: { before: null, after: resultado.user.fatherLastName }
       }
     }).catch((err) => console.error('[entity-audit] createUser fallo', err));
     return resultado;
@@ -88,7 +88,7 @@ export default class UsuarioLmbService {
     const cambios: Record<string, any> = {};
     for (const key of Object.keys(campos)) {
       const campo = (mapeo as any)[key] || key;
-      cambios[campo] = { antes: antes?.user?.[campo] ?? null, despues: campos[key] };
+      cambios[campo] = { before: antes?.user?.[campo] ?? null, after: campos[key] };
     }
     await registerEntityChange({
       entity: 'user',
@@ -130,7 +130,7 @@ export default class UsuarioLmbService {
       status: 'I',
       userId: identity?.sub || 'SYSTEM',
       channel,
-      changes: { status: { antes: 'A', despues: 'I' } }
+      changes: { status: { before: 'A', after: 'I' } }
     }).catch((err) => console.error('[entity-audit] deleteUser fallo', err));
     return { deleted: true };
   }
@@ -181,7 +181,7 @@ export default class UsuarioLmbService {
       status: 'A',
       userId: identity?.sub || 'SYSTEM',
       channel,
-      changes: { roles: { despues: asignados } }
+      changes: { roles: { after: asignados } }
     }).catch((err) => console.error('[entity-audit] assignRoles fallo', err));
     return { assigned: asignados };
   }
@@ -213,7 +213,7 @@ export default class UsuarioLmbService {
       status: 'A',
       userId: identity?.sub || 'SYSTEM',
       channel,
-      changes: { roles: { antes: [roleId], despues: [] } }
+      changes: { roles: { before: [roleId], after: [] } }
     }).catch((err) => console.error('[entity-audit] removeRole fallo', err));
     return { removed: true };
   }
@@ -251,9 +251,9 @@ export default class UsuarioLmbService {
       userId: identity?.sub || 'SYSTEM',
       channel,
       changes: {
-        code: { antes: null, despues: rol.code },
-        name: { antes: null, despues: rol.name },
-        description: { antes: null, despues: rol.description || '' }
+        code: { before: null, after: rol.code },
+        name: { before: null, after: rol.name },
+        description: { before: null, after: rol.description || '' }
       }
     }).catch((err) => console.error('[entity-audit] createRole fallo', err));
     return rol;

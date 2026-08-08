@@ -28,6 +28,9 @@ export interface EntityChangeLogRow {
   change_type: string;
   status: string;
   user_id: string;
+  user_first_name?: string | null;
+  user_father_last_name?: string | null;
+  user_mother_last_name?: string | null;
   channel: string;
   changes: Record<string, any>;
   created_at: string;

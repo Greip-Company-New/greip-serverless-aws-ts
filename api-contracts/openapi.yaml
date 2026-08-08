@@ -1569,6 +1569,18 @@ components:
           type: string
           description: Usuario (userId) que realizó el cambio.
           example: be347ee0-25b1-4140-aa1c-de5f595266cb
+        user_first_name:
+          type: string
+          nullable: true
+          description: Nombre de la persona que realizó el cambio.
+        user_father_last_name:
+          type: string
+          nullable: true
+          description: Apellido paterno de la persona que realizó el cambio.
+        user_mother_last_name:
+          type: string
+          nullable: true
+          description: Apellido materno de la persona que realizó el cambio.
         channel:
           type: string
           description: Canal desde el que se realizó el cambio.
@@ -1576,12 +1588,12 @@ components:
         changes:
           type: object
           description: |
-            Atributos que cambiaron; cada atributo lleva `antes` y `despues`.
-            Ejemplo: `{ "name": { "antes": "Mansana", "despues": "Manzana" } }`.
+            Atributos que cambiaron; cada atributo lleva `before` y `after`.
+            Ejemplo: `{ "name": { "before": "Mansana", "after": "Manzana" } }`.
           example:
             name:
-              antes: Mansana
-              despues: Manzana
+              before: Mansana
+              after: Manzana
         created_at:
           type: string
           format: date-time
