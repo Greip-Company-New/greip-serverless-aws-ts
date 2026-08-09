@@ -607,6 +607,198 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /role/{roleId}:
+    get:
+      tags: [User]
+      summary: Obtener rol con sus permisos
+      operationId: roleGet
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+      responses:
+        "200":
+          description: Rol con su lista de `permissions`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleWithPermissionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags: [User]
+      summary: Actualizar rol
+      operationId: roleUpdate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: Código único del rol.
+                name:
+                  type: string
+                  description: Nombre descriptivo del rol.
+                description:
+                  type: string
+                  description: Descripción del rol.
+                status:
+                  type: string
+                  enum: [A, I]
+                  description: Estado del rol (A=activo, I=inactivo).
+      responses:
+        "200":
+          description: Rol actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleUpdatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags: [User]
+      summary: Eliminar rol
+      operationId: roleDelete
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+      responses:
+        "200":
+          description: "Rol eliminado (data: { deleted: true })."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /role/{roleId}/permissions:
+    get:
+      tags: [User]
+      summary: Listar permisos asignados a un rol
+      operationId: rolePermissionsList
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+      responses:
+        "200":
+          description: Lista de permisos del rol.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RolePermissionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [User]
+      summary: Asignar permisos a un rol
+      operationId: rolePermissionsAssign
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissions]
+              properties:
+                permissions:
+                  type: array
+                  items:
+                    type: integer
+                  description: IDs de los permisos a asignar al rol.
+                  example: [1, 2, 3]
+      responses:
+        "200":
+          description: Permisos asignados; `data.permissions` es la lista resultante.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RolePermissionsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /role/{roleId}/permissions/{permissionId}:
+    delete:
+      tags: [User]
+      summary: Quitar un permiso de un rol
+      operationId: rolePermissionRemove
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del permiso a quitar.
+      responses:
+        "200":
+          description: "Permiso quitado (data: { removed: true })."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemovedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /permission:
     get:
       tags: [User]
@@ -621,6 +813,181 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PermissionListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [User]
+      summary: Crear permiso
+      operationId: permissionCreate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code:
+                  type: string
+                  description: Código único del permiso (ej. reports.read).
+                name:
+                  type: string
+                  description: Nombre descriptivo del permiso.
+                description:
+                  type: string
+                  description: Descripción del permiso.
+      responses:
+        "201":
+          description: Permiso creado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /permission/{permissionId}:
+    put:
+      tags: [User]
+      summary: Actualizar permiso
+      operationId: permissionUpdate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del permiso.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: Código único del permiso.
+                name:
+                  type: string
+                  description: Nombre descriptivo del permiso.
+                description:
+                  type: string
+                  description: Descripción del permiso.
+                status:
+                  type: string
+                  enum: [A, I]
+                  description: Estado del permiso.
+      responses:
+        "200":
+          description: Permiso actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionUpdatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags: [User]
+      summary: Eliminar permiso
+      operationId: permissionDelete
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del permiso.
+      responses:
+        "200":
+          description: "Permiso eliminado (data: { deleted: true })."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /tenant:
+    post:
+      tags: [Tenant]
+      summary: Crear tenant (empresa)
+      operationId: tenantCreate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code:
+                  type: string
+                  description: Código único del tenant (ej. NUEVO).
+                name:
+                  type: string
+                  description: Nombre de la empresa.
+                status:
+                  type: string
+                  enum: [A, I]
+                  description: Estado del tenant (por defecto A).
+      responses:
+        "201":
+          description: Tenant creado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Resumen de métricas del sistema
+      operationId: dashboardSummary
+      description: |
+        Devuelve contadores agregados del tenant actual: usuarios, roles,
+        permisos, productos y eventos de auditoría (totales y activos).
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Tenant para el resumen (por defecto el del token).
+      responses:
+        "200":
+          description: Resumen de métricas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummaryResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -701,32 +1068,20 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
-  /entity-audit/user/{userId}:
+  /entity-audit/user:
     get:
       tags: [Audit]
-      summary: Consultar todos los movimientos de un usuario (por userId)
+      summary: Consultar los movimientos del usuario autenticado (userId del token)
       operationId: entityAuditListByUser
       description: |
-        Devuelve el histórico de todos los cambios/eventos en los que un usuario
-        fue actor (userId). Ordenado de más reciente a más antiguo.
+        Devuelve el histórico de todos los cambios/eventos en los que el usuario
+        autenticado (identidad del accessToken) fue actor. No recibe parámetros
+        de identificación; el userId se obtiene del token. Ordenado de más reciente a más antiguo.
       security:
         - ApiKeyAuth: []
         - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Channel"
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: UUID del usuario cuyo historial se consulta.
-        - name: tenantId
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: Tenant (empresa) al que pertenece el usuario.
-          example: 1
         - name: action
           in: query
           required: false
@@ -744,7 +1099,7 @@ paths:
       responses:
         "200":
           description: |
-            Lista paginada de movimientos del usuario. `data` es un array de `EntityChangeLog`
+            Lista paginada de movimientos del usuario autenticado. `data` es un array de `EntityChangeLog`
             y `metadata.pagination` contiene la paginación.
           content:
             application/json:
@@ -1492,6 +1847,147 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Permission"
+
+    RoleUpdatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Role"
+
+    RoleWithPermissionsResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: "#/components/schemas/Role"
+                - type: object
+                  properties:
+                    permissions:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/Permission"
+
+    RolePermissionsResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [roleId, permissions]
+              properties:
+                roleId:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Permission"
+
+    RemovedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [removed]
+              properties:
+                removed:
+                  type: boolean
+                  example: true
+
+    PermissionCreatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Permission"
+
+    PermissionUpdatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Permission"
+
+    TenantCreatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [id, code, name, status]
+              properties:
+                id:
+                  type: integer
+                code:
+                  type: string
+                name:
+                  type: string
+                status:
+                  type: string
+                  enum: [A, I]
+
+    DashboardSummaryResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [tenant, users, roles, permissions, products, audit]
+              properties:
+                tenant:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    code:
+                      type: string
+                    name:
+                      type: string
+                users:
+                  type: object
+                  properties:
+                    active:
+                      type: integer
+                    total:
+                      type: integer
+                roles:
+                  type: object
+                  properties:
+                    active:
+                      type: integer
+                    total:
+                      type: integer
+                permissions:
+                  type: object
+                  properties:
+                    active:
+                      type: integer
+                    total:
+                      type: integer
+                products:
+                  type: object
+                  properties:
+                    active:
+                      type: integer
+                    total:
+                      type: integer
+                audit:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    last24h:
+                      type: integer
 
     # ===================== AUDIT =====================
     # ===================== ENTITY CHANGE LOG (service-security) =====================

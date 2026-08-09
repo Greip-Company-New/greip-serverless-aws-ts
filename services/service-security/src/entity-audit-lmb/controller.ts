@@ -48,8 +48,8 @@ export default {
     }
     try {
       const data = await Service.listByUser({
-        userId: payload.userId,
-        tenantId: payload.tenantId,
+        userId: payload.identity?.sub,
+        tenantId: payload.identity?.tenantId,
         action: payload.action,
         entity: payload.entity,
         page: payload.page,

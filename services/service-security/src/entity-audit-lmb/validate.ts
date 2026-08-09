@@ -29,8 +29,6 @@ export default class Validate {
   static async listByUser(payload: any): Promise<void> {
     const schema = Joi.object({
       requestId: Joi.string().optional(),
-      userId: Joi.string().max(100).required(),
-      tenantId: Joi.number().integer().min(1).required(),
       action: Joi.string().max(50).optional().empty(''),
       entity: Joi.string().max(100).optional().empty(''),
       page: Joi.number().integer().min(1).optional(),

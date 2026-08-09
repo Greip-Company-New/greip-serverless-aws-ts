@@ -122,6 +122,85 @@ SELECT DISTINCT r.id, r.code, r.name, r.description, r.status
  WHERE up.user_id = $1 AND r.status = 'A'
  ORDER BY name`;
 
+export const CREATE_TENANT_QUERY = `
+INSERT INTO greip.tenant (code, name, status, created_by, created_by_channel, updated_by, updated_by_channel)
+VALUES ($1, $2, $3, $4, $5, $4, $5)
+RETURNING id, code, name, status,
+          created_by, created_by_channel, created_at, updated_by, updated_by_channel, updated_at`;
+
+export const UPDATE_ROLE_QUERY = `
+UPDATE greip.role r
+   SET name = COALESCE($3, r.name),
+       description = COALESCE($4, r.description),
+       status = COALESCE($5, r.status),
+       updated_by = $6,
+       updated_by_channel = $7,
+       updated_at = now()
+ WHERE r.id = $1 AND r.tenant_id = $2
+RETURNING id, tenant_id, code, name, description, status,
+          created_by, created_by_channel, created_at, updated_by, updated_by_channel, updated_at`;
+
+export const DELETE_ROLE_QUERY = `
+DELETE FROM greip.role
+ WHERE id = $1 AND tenant_id = $2`;
+
+export const UPDATE_PERMISSION_QUERY = `
+UPDATE greip.permission p
+   SET name = COALESCE($3, p.name),
+       description = COALESCE($4, p.description),
+       status = COALESCE($5, p.status),
+       updated_by = $6,
+       updated_by_channel = $7,
+       updated_at = now()
+ WHERE p.id = $1 AND p.tenant_id = $2
+RETURNING p.id, p.tenant_id, p.code, p.name, p.description, p.status,
+          p.created_by, p.created_by_channel, p.created_at, p.updated_by, p.updated_by_channel, p.updated_at`;
+
+export const DELETE_PERMISSION_QUERY = `
+DELETE FROM greip.permission
+ WHERE id = $1 AND tenant_id = $2`;
+
+export const CREATE_ROLE_PERMISSION_QUERY = `
+INSERT INTO greip.role_permission (role_id, permission_id, tenant_id, created_by, created_by_channel, updated_by, updated_by_channel)
+SELECT $1, p.id, $2, $3, $4, $3, $4
+  FROM greip.permission p
+ WHERE p.id = $5 AND p.tenant_id = $2 AND p.status = 'A'
+ON CONFLICT (role_id, permission_id) DO NOTHING
+RETURNING role_id, permission_id`;
+
+export const DELETE_ROLE_PERMISSION_QUERY = `
+DELETE FROM greip.role_permission
+ WHERE role_id = $1 AND permission_id = $2 AND tenant_id = $3`;
+
+export const CREATE_PERMISSION_QUERY = `
+INSERT INTO greip.permission (tenant_id, code, name, description, status,
+                              created_by, created_by_channel, updated_by, updated_by_channel)
+VALUES ($1, $2, $3, $4, 'A', $5, $6, $5, $6)
+ON CONFLICT (tenant_id, code) DO NOTHING
+RETURNING id, tenant_id, code, name, description, status,
+          created_by, created_by_channel, created_at, updated_by, updated_by_channel, updated_at`;
+
+export const GET_ROLE_PERMISSIONS_QUERY = `
+SELECT p.id, p.tenant_id, p.code, p.name, p.description, p.status,
+       p.created_by, p.created_by_channel, p.created_at, p.updated_by, p.updated_by_channel, p.updated_at
+  FROM greip.role_permission rp
+  JOIN greip.permission p ON p.id = rp.permission_id
+ WHERE rp.role_id = $1 AND rp.tenant_id = $2 AND p.status = 'A'
+ ORDER BY p.code`;
+
+export const DASHBOARD_COUNTS_QUERY = `
+SELECT
+  (SELECT COUNT(*)::int FROM greip.person WHERE tenant_id = $1 AND status = 'A') AS active_people,
+  (SELECT COUNT(*)::int FROM greip.person WHERE tenant_id = $1) AS total_people,
+  (SELECT COUNT(*)::int FROM greip.role WHERE tenant_id = $1 AND status = 'A') AS active_roles,
+  (SELECT COUNT(*)::int FROM greip.role WHERE tenant_id = $1) AS total_roles,
+  (SELECT COUNT(*)::int FROM greip.permission WHERE tenant_id = $1 AND status = 'A') AS active_permissions,
+  (SELECT COUNT(*)::int FROM greip.permission WHERE tenant_id = $1) AS total_permissions,
+  (SELECT COUNT(*)::int FROM greip.product WHERE tenant_id = $1 AND status = 'A') AS active_products,
+  (SELECT COUNT(*)::int FROM greip.product WHERE tenant_id = $1) AS total_products,
+  (SELECT COUNT(*)::int FROM greip.entity_change_log WHERE tenant_id = $1) AS total_audit,
+  (SELECT COUNT(*)::int FROM greip.entity_change_log WHERE tenant_id = $1 AND created_at >= now() - interval '24 hours') AS audit_last_24h`;
+
 export const USER_PERMISSIONS_QUERY = `
 SELECT DISTINCT p.code
   FROM greip.user_person up

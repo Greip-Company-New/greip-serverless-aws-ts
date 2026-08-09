@@ -205,6 +205,66 @@ USUARIO_LMB:
               application/json: ${file(config/serverless/request/src/usuario-lmb/crearRol.vm)}
           response: ${file(config/serverless/http-response.yml)}
       - http:
+          path: /role/{roleId}
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/obtenerRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}
+          method: put
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/actualizarRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/eliminarRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}/permissions
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/obtenerPermisosRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}/permissions
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/asignarPermisosRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}/permissions/{permissionId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/quitarPermisoRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
           path: /permission
           method: get
           integration: lambda
@@ -213,6 +273,56 @@ USUARIO_LMB:
           request:
             template:
               application/json: ${file(config/serverless/request/src/usuario-lmb/listarPermisos.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /permission
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/crearPermiso.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /permission/{permissionId}
+          method: put
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/actualizarPermiso.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /permission/{permissionId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/eliminarPermiso.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /tenant
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/crearTenant.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /dashboard
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/resumenDashboard.vm)}
           response: ${file(config/serverless/http-response.yml)}
 
 # Utilidad de bootstrap: crea el rol ADMIN con todos los permisos y el usuario
@@ -263,7 +373,7 @@ ENTITY_AUDIT_LMB:
               application/json: ${file(config/serverless/request/src/entity-audit-lmb/listChanges.vm)}
           response: ${file(config/serverless/http-response.yml)}
       - http:
-          path: /entity-audit/user/{userId}
+          path: /entity-audit/user
           method: get
           integration: lambda
           private: true

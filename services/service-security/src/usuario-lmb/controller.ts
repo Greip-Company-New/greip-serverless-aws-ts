@@ -196,5 +196,183 @@ export default {
     } catch (error) {
       return errorResponse(methodName, payload, error);
     }
+  },
+
+  async getRole(payload: any) {
+    const methodName = 'getRole';
+    try {
+      await Validate.getRole(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      const result = ResponseFactory.success(await service.getRole(payload), MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
+  },
+
+  async updateRole(payload: any) {
+    const methodName = 'updateRole';
+    try {
+      await Validate.updateRole(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      const result = ResponseFactory.updated(await service.updateRole(payload, payload.identity), MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
+  },
+
+  async deleteRole(payload: any) {
+    const methodName = 'deleteRole';
+    try {
+      await Validate.deleteRole(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      await service.deleteRole(payload, payload.identity);
+      const result = ResponseFactory.deleted(MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
+  },
+
+  async getRolePermissions(payload: any) {
+    const methodName = 'getRolePermissions';
+    try {
+      await Validate.getRolePermissions(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      const result = ResponseFactory.success(await service.getRolePermissions(payload), MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
+  },
+
+  async assignRolePermissions(payload: any) {
+    const methodName = 'assignRolePermissions';
+    try {
+      await Validate.assignRolePermissions(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      const result = ResponseFactory.success(await service.assignRolePermissions(payload, payload.identity), MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
+  },
+
+  async removeRolePermission(payload: any) {
+    const methodName = 'removeRolePermission';
+    try {
+      await Validate.removeRolePermission(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      const result = ResponseFactory.success(await service.removeRolePermission(payload, payload.identity), MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
+  },
+
+  async createPermission(payload: any) {
+    const methodName = 'createPermission';
+    try {
+      await Validate.createPermission(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      const result = ResponseFactory.created(await service.createPermission(payload, payload.identity), MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
+  },
+
+  async updatePermission(payload: any) {
+    const methodName = 'updatePermission';
+    try {
+      await Validate.updatePermission(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      const result = ResponseFactory.updated(await service.updatePermission(payload, payload.identity), MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
+  },
+
+  async deletePermission(payload: any) {
+    const methodName = 'deletePermission';
+    try {
+      await Validate.deletePermission(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      await service.deletePermission(payload, payload.identity);
+      const result = ResponseFactory.deleted(MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
+  },
+
+  async createTenant(payload: any) {
+    const methodName = 'createTenant';
+    try {
+      await Validate.createTenant(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      const result = ResponseFactory.created(await service.createTenant(payload, payload.identity), MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
+  },
+
+  async dashboardSummary(payload: any) {
+    const methodName = 'dashboardSummary';
+    try {
+      await Validate.dashboardSummary(payload);
+    } catch (error: any) {
+      return badRequest(methodName, payload, error);
+    }
+    try {
+      const result = ResponseFactory.success(await service.dashboardSummary(payload), MESSAGES_SUCCESS.PROCESS_SUCCESS);
+      result.requestId = payload?.requestId;
+      return result;
+    } catch (error) {
+      return errorResponse(methodName, payload, error);
+    }
   }
 };

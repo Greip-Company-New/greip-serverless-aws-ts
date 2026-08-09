@@ -46,3 +46,45 @@ export interface CreateRoleRequest {
   name: string;
   description?: string;
 }
+
+export interface UpdateRoleRequest {
+  roleId: string;
+  code?: string;
+  name?: string;
+  description?: string;
+  status?: 'A' | 'I';
+}
+
+export interface CreatePermissionRequest {
+  code: string;
+  name: string;
+  description?: string;
+}
+
+export interface UpdatePermissionRequest {
+  permissionId: string;
+  code?: string;
+  name?: string;
+  description?: string;
+  status?: 'A' | 'I';
+}
+
+export interface AssignRolePermissionsRequest {
+  roleId: string;
+  permissions: string[];
+}
+
+export interface RemoveRolePermissionRequest {
+  roleId: string;
+  permissionId: string;
+}
+
+export interface CreateTenantRequest {
+  code: string;
+  name: string;
+  status?: 'A' | 'I';
+}
+
+export interface DashboardSummaryRequest {
+  tenantId?: number;
+}

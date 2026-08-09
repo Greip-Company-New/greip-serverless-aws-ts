@@ -26,7 +26,18 @@ addMiddleware(RbacMiddleware({
         getUserPermissions: ['permission.read'],
         createRole: ['role.manage'],
         listRoles: ['role.manage', 'user.read'],
-        listPermissions: ['permission.read']
+        listPermissions: ['permission.read'],
+        getRole: ['role.manage', 'permission.read'],
+        updateRole: ['role.manage'],
+        deleteRole: ['role.manage'],
+        getRolePermissions: ['permission.read', 'role.manage'],
+        assignRolePermissions: ['role.manage'],
+        removeRolePermission: ['role.manage'],
+        createPermission: ['permission.manage'],
+        updatePermission: ['permission.manage'],
+        deletePermission: ['permission.manage'],
+        createTenant: ['tenant.manage'],
+        dashboardSummary: ['dashboard.read']
     }
 }));
 

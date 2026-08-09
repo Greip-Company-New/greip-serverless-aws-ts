@@ -1,5 +1,5 @@
 // Servicio de autenticacion: login, MFA, refresh, logout, recuperacion de contrasena.
-import { LambdaService, Helpers } from 'ly-nodejs-ts-common';
+import { LambdaService, Helpers, ResponseFactory } from 'ly-nodejs-ts-common';
 import { UsuarioRepository } from '../common/repositories/dynamodb/usuario';
 import { SesionService } from '../common/sesion-service';
 import { MfaService } from '../common/mfa-service';
@@ -17,6 +17,10 @@ import {
   STATUS_ACTIVE,
   AUDIT_EVENTS
 } from '../common/constants';
+
+function businessError(statusCode: number, message: string): never {
+  throw ResponseFactory.error(message, statusCode);
+}
 
 export default class AuthService {
   private usuarioRepo: UsuarioRepository;
@@ -67,7 +71,7 @@ export default class AuthService {
     const { email, documentType, documentNumber, password, channel } = payload;
 
     if (!channelHeader) {
-      throw new Error('Header channel es obligatorio');
+      throw businessError(400, 'Header channel es obligatorio');
     }
 
     const usuario = email
@@ -81,14 +85,14 @@ export default class AuthService {
         { action: AUDIT_EVENTS.LOGIN_FAILED, entity: 'USER', entityId: email || `${documentType}#${documentNumber}`, actor: email, sourceIp: ip, userAgent, detail: { motivo: 'usuario no encontrado' } },
         process.env.TENANT_DEFAULT || 'GREIP', channelHeader
       );
-      throw new Error('Credenciales invalidas');
+      throw businessError(401, 'Credenciales invalidas');
     }
 
     if (usuario.lockedUntil && new Date(usuario.lockedUntil) > new Date()) {
-      throw new Error(`Usuario bloqueado temporalmente. Intentelo mas tarde`);
+      throw businessError(423, `Usuario bloqueado temporalmente. Intentelo mas tarde`);
     }
     if (usuario.status !== STATUS_ACTIVE) {
-      throw new Error('Usuario inactivo');
+      throw businessError(403, 'Usuario inactivo');
     }
 
     if (!verifyPassword(password, usuario.password)) {
@@ -109,7 +113,7 @@ export default class AuthService {
           usuario.tenant, channelHeader
         );
       }
-      throw new Error('Credenciales invalidas');
+      throw businessError(401, 'Credenciales invalidas');
     }
 
     if (usuario.failedAttempts > 0) {
@@ -151,15 +155,15 @@ export default class AuthService {
     try {
       identidad = await verificarToken(mfaToken);
     } catch (error) {
-      throw new Error('Token MFA invalido o expirado');
+      throw businessError(401, 'Token MFA invalido o expirado');
     }
     if (identidad.type !== TOKEN_TYPE_MFA) {
-      throw new Error('Token MFA invalido');
+      throw businessError(401, 'Token MFA invalido');
     }
 
     const usuario = await this.usuarioRepo.getById(identidad.sub);
     if (!usuario) {
-      throw new Error('Usuario no encontrado');
+      throw businessError(404, 'Usuario no encontrado');
     }
 
     const valido = await this.mfaService.verifyCode(usuario.tenant, usuario.userId, challengeId, code);
@@ -168,7 +172,7 @@ export default class AuthService {
         { action: AUDIT_EVENTS.MFA_FAILED, entity: 'MFA', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
         usuario.tenant, channelHeader
       );
-      throw new Error('Codigo de verificacion invalido');
+      throw businessError(400, 'Codigo de verificacion invalido');
     }
 
     const permissions = await this.usuarioService.getUserPermissions(usuario.userId);
@@ -191,7 +195,7 @@ export default class AuthService {
     const { refreshToken, logoutAll } = payload;
     const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
     if (!refreshToken) {
-      throw new Error('refreshToken es obligatorio');
+      throw businessError(400, 'refreshToken es obligatorio');
     }
     await this.sesionService.closeSession(refreshToken, Boolean(logoutAll));
     if (identity) {
@@ -207,7 +211,7 @@ export default class AuthService {
     const { currentPassword, newPassword } = payload;
     const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
     if (!identity) {
-      throw new Error('No autenticado');
+      throw businessError(401, 'No autenticado');
     }
     await this.usuarioService.changePassword(identity.sub, currentPassword, newPassword);
     await this.registrarEvento(
@@ -266,15 +270,15 @@ export default class AuthService {
     try {
       identidad = await verificarToken(resetToken);
     } catch (error) {
-      throw new Error('Token de recuperacion invalido o expirado');
+      throw businessError(401, 'Token de recuperacion invalido o expirado');
     }
     if (identidad.type !== TOKEN_TYPE_RESET) {
-      throw new Error('Token de recuperacion invalido');
+      throw businessError(401, 'Token de recuperacion invalido');
     }
 
     const usuario = await this.usuarioRepo.getById(identidad.sub);
     if (!usuario) {
-      throw new Error('Usuario no encontrado');
+      throw businessError(404, 'Usuario no encontrado');
     }
 
     await this.usuarioService.resetPassword(usuario.userId, newPassword);

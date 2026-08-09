@@ -24,16 +24,16 @@ export class SesionService {
     this.rbac = new RbacRepository();
   }
 
-  private async resolveTenantId(tenantCode: string): Promise<number | undefined> {
+  private async resolveTenant(tenantCode: string): Promise<{ id?: number; name?: string }> {
     const tenant = await this.rbac.getTenant(tenantCode);
-    return tenant?.id;
+    return { id: tenant?.id, name: tenant?.name };
   }
 
   /**
    * Genera el par access/refresh, crea la sesion en DynamoDB y devuelve los tokens.
    */
   async startSession(usuario: UsuarioDynamo, extras?: { permissions?: string[]; roles?: string[]; userAgent?: string; ip?: string; channel?: string }): Promise<ResultadoTokens> {
-    const tenantId = await this.resolveTenantId(usuario.tenant);
+    const { id: tenantId, name: tenantName } = await this.resolveTenant(usuario.tenant);
     const identidad: Identidad = {
       sub: usuario.userId,
       tenant: usuario.tenant,
@@ -53,7 +53,7 @@ export class SesionService {
       accessToken,
       refreshToken,
       expiresAt: Date.now() + ACCESS_TOKEN_TTL_MIN * 60 * 1000,
-      user: mapPublicUser(usuario)
+      user: mapPublicUser(usuario, tenantId, tenantName)
     };
   }
 
@@ -92,7 +92,7 @@ export class SesionService {
     const nuevoRefresh = await this.generateRefreshToken(usuario.userId, usuario.tenant);
     await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(nuevoRefresh), userAgent || sesion.userAgent, ip || sesion.ip, usuario.userId);
 
-    const tenantId = await this.resolveTenantId(usuario.tenant);
+    const { id: tenantId, name: tenantName } = await this.resolveTenant(usuario.tenant);
     const accessToken = await firmarToken(
       { sub: usuario.userId, tenant: usuario.tenant, tenantId, channel: channel || identidad.channel, type: TOKEN_TYPE_ACCESS },
       ACCESS_TOKEN_TTL_MIN
@@ -102,7 +102,7 @@ export class SesionService {
       accessToken,
       refreshToken: nuevoRefresh,
       expiresAt: Date.now() + ACCESS_TOKEN_TTL_MIN * 60 * 1000,
-      user: mapPublicUser(usuario, tenantId)
+      user: mapPublicUser(usuario, tenantId, tenantName)
     };
   }
 

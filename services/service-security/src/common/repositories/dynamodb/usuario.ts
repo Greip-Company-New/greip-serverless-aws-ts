@@ -145,11 +145,12 @@ export class UsuarioRepository {
   }
 }
 
-export function mapPublicUser(usuario: UsuarioDynamo, tenantId?: number): any {
+export function mapPublicUser(usuario: UsuarioDynamo, tenantId?: number, tenantName?: string): any {
   return {
     userId: usuario.userId,
     tenant: usuario.tenant,
     tenantId,
+    tenantName,
     email: usuario.email,
     documentType: usuario.documentType,
     documentNumber: usuario.documentNumber,

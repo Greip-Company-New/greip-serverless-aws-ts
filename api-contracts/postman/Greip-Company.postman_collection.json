@@ -749,6 +749,393 @@
             },
             "description": "Lista los permisos disponibles del tenant."
           }
+        },
+        {
+          "name": "Get role",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Administrador\",\n  \"description\": \"Rol admin\",\n  \"status\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get role permissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1/permissions",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1",
+                "permissions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign role permissions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1/permissions",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1",
+                "permissions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\n    1,\n    2,\n    3\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Remove role permission",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1/permissions/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1",
+                "permissions",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/permission",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "permission"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"reports.read\",\n  \"name\": \"Leer reportes\",\n  \"description\": \"Consulta de reportes\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update permission",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/permission/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "permission",
+                "1"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Leer reportes\",\n  \"status\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete permission",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/permission/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "permission",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/tenant",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "tenant"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"NUEVO\",\n  \"name\": \"Nueva Empresa\",\n  \"status\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Dashboard summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/dashboard",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "dashboard"
+              ]
+            }
+          }
         }
       ]
     },
@@ -833,21 +1220,16 @@
               }
             ],
             "url": {
-              "raw": "{{api-server}}/srv-security/entity-audit/user/{{userId}}?tenantId=1",
+              "raw": "{{api-server}}/srv-security/entity-audit/user",
               "host": [
                 "{{api-server}}"
               ],
               "path": [
                 "srv-security",
                 "entity-audit",
-                "user",
-                "{{userId}}"
+                "user"
               ],
               "query": [
-                {
-                  "key": "tenantId",
-                  "value": "1"
-                },
                 {
                   "key": "action",
                   "value": "",
