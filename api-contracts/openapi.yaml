@@ -1123,6 +1123,7 @@ paths:
       security:
         - ApiKeyAuth: []
         - BearerAuth: []
+      x-required-permission: product.read
       parameters:
         - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/Page"
@@ -1149,6 +1150,10 @@ paths:
                 $ref: "#/components/schemas/ProductListResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     post:
       tags: [Product]
       summary: Crear producto
@@ -1156,6 +1161,7 @@ paths:
       security:
         - ApiKeyAuth: []
         - BearerAuth: []
+      x-required-permission: product.create
       parameters:
         - $ref: "#/components/parameters/Channel"
       requestBody:
@@ -1173,6 +1179,10 @@ paths:
                 $ref: "#/components/schemas/ProductResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /product/{productId}:
     get:
@@ -1182,6 +1192,7 @@ paths:
       security:
         - ApiKeyAuth: []
         - BearerAuth: []
+      x-required-permission: product.read
       parameters:
         - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/ProductId"
@@ -1196,6 +1207,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
     put:
@@ -1205,6 +1218,7 @@ paths:
       security:
         - ApiKeyAuth: []
         - BearerAuth: []
+      x-required-permission: product.update
       parameters:
         - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/ProductId"
@@ -1225,6 +1239,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
@@ -1234,6 +1250,7 @@ paths:
       security:
         - ApiKeyAuth: []
         - BearerAuth: []
+      x-required-permission: product.delete
       parameters:
         - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/ProductId"
@@ -1248,6 +1265,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 

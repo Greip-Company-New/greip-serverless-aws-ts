@@ -93,8 +93,10 @@ export class SesionService {
     await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(nuevoRefresh), userAgent || sesion.userAgent, ip || sesion.ip, usuario.userId);
 
     const { id: tenantId, name: tenantName } = await this.resolveTenant(usuario.tenant);
+    const permissions = await this.rbac.getUserPermissions(usuario.userId);
+    const roles = (await this.rbac.getUserRoles(usuario.userId)).map((r) => r.code);
     const accessToken = await firmarToken(
-      { sub: usuario.userId, tenant: usuario.tenant, tenantId, channel: channel || identidad.channel, type: TOKEN_TYPE_ACCESS },
+      { sub: usuario.userId, tenant: usuario.tenant, tenantId, channel: channel || identidad.channel, type: TOKEN_TYPE_ACCESS, permissions, roles },
       ACCESS_TOKEN_TTL_MIN
     );
 

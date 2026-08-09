@@ -304,7 +304,11 @@ FROM greip.tenant t,
         ('dashboard.read', 'Ver dashboard', 'Permite consultar el resumen de metricas'),
         ('audit.read',   'Leer auditoria',  'Permite consultar la auditoria'),
         ('auth.manage',  'Gestionar auth',  'Permite administrar la autenticacion'),
-        ('mfa.manage',   'Gestionar MFA',   'Permite administrar factores MFA')
+        ('mfa.manage',   'Gestionar MFA',   'Permite administrar factores MFA'),
+        ('product.create', 'Crear producto', 'Permite crear productos en el catalogo'),
+        ('product.read', 'Leer productos', 'Permite consultar productos del catalogo'),
+        ('product.update', 'Actualizar producto', 'Permite modificar productos del catalogo'),
+        ('product.delete', 'Eliminar producto', 'Permite eliminar productos del catalogo')
      ) AS p(code, name, description)
 WHERE t.code = 'GREIP'
 ON CONFLICT (tenant_id, code) DO NOTHING;

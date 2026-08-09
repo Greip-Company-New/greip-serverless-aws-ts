@@ -9,6 +9,8 @@ PRODUCT_LMB:
       patterns:
         - 'dist/product-lmb/**/*.js'
         - 'dist/product-lmb/**/*.ts'
+        - 'dist/common/middlewares/**/*.js'
+        - 'dist/common/middlewares/**/*.ts'
     events:
       - http:
           path: /product
