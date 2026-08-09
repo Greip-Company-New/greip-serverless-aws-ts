@@ -84,10 +84,11 @@ provider:
     SM_ENCRIPTACION_TOKEN: 'Greip/Encriptacion/Token'
     TABLA_USUARIOS: ${self:custom.config.tablaUsuarios.${self:custom.stageDeploy}}
     TABLA_SESIONES: ${self:custom.config.tablaSesiones.${self:custom.stageDeploy}}
-    TABLA_AUDITORIA: ${self:custom.config.tablaAuditoria.${self:custom.stageDeploy}}
     TABLA_MFA: ${self:custom.config.tablaMfa.${self:custom.stageDeploy}}
     LMB_SMS: ${self:custom.config.lmbCrossSms.${self:custom.stageDeploy}}
     LMB_EMAIL: ${self:custom.config.lmbCrossEmail.${self:custom.stageDeploy}}
+    LMB_ENTITY_AUDIT: ${self:custom.config.lmbEntityAudit.${self:custom.stageDeploy}}
+    SQS_AUDIT_QUEUE_URL: ${self:custom.config.sqsAuditUrl.${self:custom.stageDeploy}}
     TENANT_DEFAULT: 'GREIP'
     EMAIL_SES_FROM: 'no-reply@greip.com.pe'
     FRONTEND_URL: 'https://greip.com.pe'

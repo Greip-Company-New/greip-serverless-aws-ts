@@ -3,6 +3,15 @@ import Validate from './validate';
 import { ResponseFactory, MESSAGES_SUCCESS } from 'ly-nodejs-ts-common';
 
 const LAMBDA_NAME = process.env.LAMBDA_PREFIX + '-AUTH';
+
+function validationResponse(error: any) {
+  if (error?.httpStatus) {
+    return ResponseFactory.error(error.message, error.httpStatus, { errors: [error.message] });
+  }
+  return ResponseFactory.badRequest(error);
+}
+
+
 const service = new Service();
 
 function errorResponse(methodName: string, payload: any, error: any): never {
@@ -18,7 +27,7 @@ export default {
     try {
       await Validate.login(payload);
     } catch (error: any) {
-      const result = ResponseFactory.badRequest(error);
+      const result = validationResponse(error);
       result.requestId = payload?.requestId;
       throw new Error(JSON.stringify(result));
     }
@@ -36,7 +45,7 @@ export default {
     try {
       await Validate.verifyMfa(payload);
     } catch (error: any) {
-      const result = ResponseFactory.badRequest(error);
+      const result = validationResponse(error);
       result.requestId = payload?.requestId;
       throw new Error(JSON.stringify(result));
     }
@@ -54,7 +63,7 @@ export default {
     try {
       await Validate.refreshToken(payload);
     } catch (error: any) {
-      const result = ResponseFactory.badRequest(error);
+      const result = validationResponse(error);
       result.requestId = payload?.requestId;
       throw new Error(JSON.stringify(result));
     }
@@ -72,7 +81,7 @@ export default {
     try {
       await Validate.logout(payload);
     } catch (error: any) {
-      const result = ResponseFactory.badRequest(error);
+      const result = validationResponse(error);
       result.requestId = payload?.requestId;
       throw new Error(JSON.stringify(result));
     }
@@ -90,7 +99,7 @@ export default {
     try {
       await Validate.changePassword(payload);
     } catch (error: any) {
-      const result = ResponseFactory.badRequest(error);
+      const result = validationResponse(error);
       result.requestId = payload?.requestId;
       throw new Error(JSON.stringify(result));
     }
@@ -108,7 +117,7 @@ export default {
     try {
       await Validate.requestRecovery(payload);
     } catch (error: any) {
-      const result = ResponseFactory.badRequest(error);
+      const result = validationResponse(error);
       result.requestId = payload?.requestId;
       throw new Error(JSON.stringify(result));
     }
@@ -126,7 +135,7 @@ export default {
     try {
       await Validate.resetPassword(payload);
     } catch (error: any) {
-      const result = ResponseFactory.badRequest(error);
+      const result = validationResponse(error);
       result.requestId = payload?.requestId;
       throw new Error(JSON.stringify(result));
     }

@@ -20,6 +20,9 @@ export * from './constants/ConstantCore.js'
 export * from './middleware/api-gateway-event.middleware.js'
 export * from './middleware/app-factory.js'
 export * from './middleware/lambda-event.middleware.js'
+export * from './middleware/auth.middleware.js'
+
+export * from './services/token.service.js'
 
 export * from './models/base/app-core.interface.js'
 export * from './models/base/app-exception.interface.js'
@@ -39,6 +42,8 @@ export * from './services/helpers.js'
 
 
 export { default as ApiGatewayEvent } from './middleware/api-gateway-event.middleware.js';
+export { default as AuthMiddleware } from './middleware/auth.middleware.js';
+export { verifyToken } from './services/token.service.js';
 
 import { DynamoDBService } from './services/dynamodb.js';
 import { S3Service } from './services/s3.js';

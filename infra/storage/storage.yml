@@ -180,6 +180,37 @@ Resources:
         - Key: STAGE
           Value: !Ref Environment
 
+  # ---------- SQS (auditoria asincrona) ----------
+
+  # Dead Letter Queue: mensajes que fallan despues de maxReceiveCount van aqui.
+  AuditoriaDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub 'greip-audit-dlq-${BucketSuffix}'
+      MessageRetentionPeriod: 1209600   # 14 dias
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  # Cola de auditoria: las Lambdas encolan los eventos de auditoria aqui y una
+  # Lambda procesadora (AUDIT_SYNC_LMB) los persiste en PostgreSQL.
+  AuditoriaQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub 'greip-audit-${BucketSuffix}'
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 345600   # 4 dias (el consumidor lo borra al procesar)
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AuditoriaDlq.Arn
+        maxReceiveCount: 5
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
   # ---------- S3 ----------
 
   AppBucket:
@@ -242,6 +273,22 @@ Outputs:
     Value: !Ref SeguridadMfaTable
     Export:
       Name: !Sub 'greip-tabla-seguridad-mfa-${Environment}'
+  AuditoriaQueueName:
+    Value: !Ref AuditoriaQueue
+    Export:
+      Name: !Sub 'greip-cola-auditoria-${Environment}'
+  AuditoriaQueueUrl:
+    Value: !Ref AuditoriaQueue
+    Export:
+      Name: !Sub 'greip-cola-auditoria-url-${Environment}'
+  AuditoriaQueueArn:
+    Value: !GetAtt AuditoriaQueue.Arn
+    Export:
+      Name: !Sub 'greip-cola-auditoria-arn-${Environment}'
+  AuditoriaDlqName:
+    Value: !Ref AuditoriaDlq
+    Export:
+      Name: !Sub 'greip-cola-auditoria-dlq-${Environment}'
   AppBucketName:
     Value: !Ref AppBucket
     Export:

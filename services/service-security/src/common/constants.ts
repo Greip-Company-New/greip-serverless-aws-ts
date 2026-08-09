@@ -10,17 +10,25 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   C: 'Carnet de Extranjeria'
 };
 
+// Campos de la entidad User que se auditan en el historico de cambios.
+// Usan el nombre camelCase que devuelve el perfil (getUser).
+export const USER_AUDIT_FIELDS = [
+  'email',
+  'firstName',
+  'fatherLastName',
+  'motherLastName',
+  'documentType',
+  'documentNumber',
+  'phone',
+  'status'
+];
+
 // Canales MFA soportados
 export const MFA_CHANNELS = ['TOTP', 'SMS', 'EMAIL'] as const;
 export const TOKEN_TYPE_ACCESS = 'ACCESS';
 export const TOKEN_TYPE_MFA = 'MFA';
 export const TOKEN_TYPE_RESET = 'RESET';
 export const TOKEN_TYPE_REFRESH = 'REFRESH';
-
-// Paginacion
-export const DEFAULT_PAGE = 1;
-export const DEFAULT_PAGE_SIZE = 10;
-export const MAX_PAGE_SIZE = 100;
 
 // Duraciones (en minutos) de tokens JWT
 export const ACCESS_TOKEN_TTL_MIN = 15;
@@ -58,9 +66,12 @@ export const BASE_PERMISSIONS = [
   'role.manage',
   'group.manage',
   'permission.read',
+  'permission.manage',
   'audit.read',
   'auth.manage',
-  'mfa.manage'
+  'mfa.manage',
+  'tenant.manage',
+  'dashboard.read'
 ];
 
 // Eventos de auditoria
@@ -81,6 +92,14 @@ export const AUDIT_EVENTS = {
   ROLE_ASSIGNED: 'USER_ROLE_ASSIGNED',
   ROLE_REMOVED: 'USER_ROLE_REMOVED',
   ROLE_CREATED: 'ROLE_CREATED',
+  ROLE_UPDATED: 'ROLE_UPDATED',
+  ROLE_DELETED: 'ROLE_DELETED',
+  ROLE_PERMISSIONS_ASSIGNED: 'ROLE_PERMISSIONS_ASSIGNED',
+  ROLE_PERMISSION_REMOVED: 'ROLE_PERMISSION_REMOVED',
+  PERMISSION_CREATED: 'PERMISSION_CREATED',
+  PERMISSION_UPDATED: 'PERMISSION_UPDATED',
+  PERMISSION_DELETED: 'PERMISSION_DELETED',
+  TENANT_CREATED: 'TENANT_CREATED',
   USER_STREAM_INSERT: 'USER_STREAM_INSERT',
   USER_STREAM_MODIFY: 'USER_STREAM_MODIFY',
   USER_STREAM_REMOVE: 'USER_STREAM_REMOVE'

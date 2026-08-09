@@ -9,6 +9,7 @@ headers:
   - Access-Control-Allow-Origin
   - Access-Control-Allow-Credentials
   - User
+  - channel
   - Canal
   - User-Token
   - User-Identity

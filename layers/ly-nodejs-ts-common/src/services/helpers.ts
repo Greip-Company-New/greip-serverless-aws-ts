@@ -2,10 +2,26 @@ import { ResponseFactory } from "src/models/reponse/response-factory.js";
 import { decryptAes, encryptAes } from "./aes.js";
 import { SecretsManagerService } from "./secretsmanager.js";
 import { LambdaService } from "./lambda.js";
+import { SQSService } from "./sqs.js";
 import { FORMATS, MESSAGES_ERROR } from "src/constants/ConstantCore.js";
 import { getDateNowFormat, getNewUuId } from "src/base/util.js";
 import { DynamoDBService } from "./dynamodb.js";
 import jwt from 'jsonwebtoken';
+
+export interface EntityChangeInput {
+  entity: string;
+  entityKey: string | number;
+  tenant?: string;      // codigo del tenant (ej. GREIP)
+  tenantId?: number;    // id numerico del tenant (si ya se conoce)
+  changeType?: string;  // CREATE | UPDATE | DELETE | ASSIGN | REMOVE (cambios de datos)
+  action?: string;      // USER_LOGIN | USER_CREATED | PASSWORD_CHANGED ... (eventos de seguridad)
+  status?: string;      // A | I
+  userId?: string;
+  channel?: string;
+  sourceIp?: string;
+  userAgent?: string;
+  changes?: Record<string, any>; // { campo: { before, after } } o detalle del evento
+}
 
 export class Helpers {
     static obtenerUltimaFechaTrimestral(year: number, month: number) {
@@ -188,6 +204,36 @@ export class Helpers {
         console.log('LoggerId >>>> ', loggerPayload.id);
     }
 
+    /**
+     * Construye el detalle de cambios de una entidad comparando los campos
+     * definidos en `fields`. Devuelve { campo: { before, after } } solo para
+     * los campos que difieren. Sirve para CREATE (before=null), UPDATE y
+     * DELETE (after=null) de forma unificada.
+     */
+    static buildEntityChanges(before: Record<string, any> | null, after: Record<string, any> | null, fields: string[]): Record<string, any> {
+        const cambios: Record<string, any> = {};
+        for (const campo of fields) {
+            const vAntes = before ? before[campo] : null;
+            const vDespues = after ? after[campo] : null;
+            if (String(vAntes ?? '') !== String(vDespues ?? '')) {
+                cambios[campo] = { before: vAntes, after: vDespues };
+            }
+        }
+        return cambios;
+    }
 
+    /**
+     * Encola un cambio/evento de entidad para el historico de auditoria.
+     * No bloquea el request: envia a la cola SQS (greip-audit-<env>) y la
+     * Lambda AUDIT_SYNC_LMB lo persiste en PostgreSQL (entity_change_log).
+     */
+    static async registerEntityChange(input: EntityChangeInput): Promise<void> {
+        const queueUrl = process.env.SQS_AUDIT_QUEUE_URL || 'https://sqs.us-east-2.amazonaws.com/918897411288/greip-audit-dev';
+        const sqsService = new SQSService();
+        await sqsService.sendMessage({
+            queueUrl,
+            messageBody: input
+        });
+    }
 
 }

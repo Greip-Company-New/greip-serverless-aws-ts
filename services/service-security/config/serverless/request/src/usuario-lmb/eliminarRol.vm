@@ -9,9 +9,11 @@
 
 {
   "origin": "API_GATEWAY_REST_EVENT",
-  "action": "listAudit",
+  "action": "deleteRole",
   #set( $body = $input.json("$") )
-  "body": $body,
+  "body": {
+    "payload": $body
+  },
   #set( $map = $input.params().header )
   "headers": {
     $loop

@@ -2,6 +2,7 @@
 import crypto from 'crypto';
 import { UsuarioRepository, mapPublicUser } from './repositories/dynamodb/usuario';
 import { SesionRepository } from './repositories/dynamodb/sesion';
+import { RbacRepository } from './repositories/postgres/rbac';
 import { firmarToken, verificarToken } from './token';
 import { sha256Hex } from './password';
 import {
@@ -15,19 +16,29 @@ import { UsuarioDynamo, ResultadoTokens, Identidad } from './models';
 export class SesionService {
   private usuarioRepo: UsuarioRepository;
   private sesionRepo: SesionRepository;
+  private rbac: RbacRepository;
 
   constructor() {
     this.usuarioRepo = new UsuarioRepository();
     this.sesionRepo = new SesionRepository();
+    this.rbac = new RbacRepository();
+  }
+
+  private async resolveTenant(tenantCode: string): Promise<{ id?: number; name?: string }> {
+    const tenant = await this.rbac.getTenant(tenantCode);
+    return { id: tenant?.id, name: tenant?.name };
   }
 
   /**
    * Genera el par access/refresh, crea la sesion en DynamoDB y devuelve los tokens.
    */
-  async startSession(usuario: UsuarioDynamo, extras?: { permissions?: string[]; roles?: string[]; userAgent?: string; ip?: string }): Promise<ResultadoTokens> {
+  async startSession(usuario: UsuarioDynamo, extras?: { permissions?: string[]; roles?: string[]; userAgent?: string; ip?: string; channel?: string }): Promise<ResultadoTokens> {
+    const { id: tenantId, name: tenantName } = await this.resolveTenant(usuario.tenant);
     const identidad: Identidad = {
       sub: usuario.userId,
       tenant: usuario.tenant,
+      tenantId,
+      channel: extras?.channel,
       type: TOKEN_TYPE_ACCESS,
       permissions: extras?.permissions,
       roles: extras?.roles
@@ -36,13 +47,13 @@ export class SesionService {
     const accessToken = await firmarToken(identidad, ACCESS_TOKEN_TTL_MIN);
     const refreshToken = await this.generateRefreshToken(usuario.userId, usuario.tenant);
 
-    await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(refreshToken), extras?.userAgent, extras?.ip);
+    await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(refreshToken), extras?.userAgent, extras?.ip, usuario.userId);
 
     return {
       accessToken,
       refreshToken,
       expiresAt: Date.now() + ACCESS_TOKEN_TTL_MIN * 60 * 1000,
-      user: mapPublicUser(usuario)
+      user: mapPublicUser(usuario, tenantId, tenantName)
     };
   }
 
@@ -59,7 +70,7 @@ export class SesionService {
   /**
    * Valida el refresh token y emite un nuevo par (rotacion de sesion).
    */
-  async refreshSession(refreshToken: string, userAgent?: string, ip?: string): Promise<ResultadoTokens> {
+  async refreshSession(refreshToken: string, userAgent?: string, ip?: string, channel?: string): Promise<ResultadoTokens> {
     const identidad = await verificarToken(refreshToken);
     if (identidad.type !== TOKEN_TYPE_REFRESH) {
       throw new Error('Token invalido para renovacion');
@@ -79,10 +90,11 @@ export class SesionService {
     await this.sesionRepo.delete(identidad.tenant, identidad.sub, hash);
 
     const nuevoRefresh = await this.generateRefreshToken(usuario.userId, usuario.tenant);
-    await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(nuevoRefresh), userAgent || sesion.userAgent, ip || sesion.ip);
+    await this.sesionRepo.create(usuario.tenant, usuario.userId, sha256Hex(nuevoRefresh), userAgent || sesion.userAgent, ip || sesion.ip, usuario.userId);
 
+    const { id: tenantId, name: tenantName } = await this.resolveTenant(usuario.tenant);
     const accessToken = await firmarToken(
-      { sub: usuario.userId, tenant: usuario.tenant, type: TOKEN_TYPE_ACCESS },
+      { sub: usuario.userId, tenant: usuario.tenant, tenantId, channel: channel || identidad.channel, type: TOKEN_TYPE_ACCESS },
       ACCESS_TOKEN_TTL_MIN
     );
 
@@ -90,7 +102,7 @@ export class SesionService {
       accessToken,
       refreshToken: nuevoRefresh,
       expiresAt: Date.now() + ACCESS_TOKEN_TTL_MIN * 60 * 1000,
-      user: mapPublicUser(usuario)
+      user: mapPublicUser(usuario, tenantId, tenantName)
     };
   }
 

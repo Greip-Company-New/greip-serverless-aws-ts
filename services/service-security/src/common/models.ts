@@ -21,7 +21,11 @@ export interface UsuarioDynamo {
   lockedUntil?: string | null;
   passwordChangedAt?: string | null;
   mfa: Record<string, any>; // configuracion de factores { totp, sms, email }
+  createdBy: string;       // email/userId que creo el registro
+  createdByChannel?: string; // canal desde el que se creo (AppWeb, AppMovil, Chatbot, Whatsapp)
   createdAt: string;
+  updatedBy: string;       // email/userId de la ultima actualizacion
+  updatedByChannel?: string;
   updatedAt: string;
   lastActionAt?: string;
   lastRequestId?: string;
@@ -41,7 +45,11 @@ export interface UsuarioPublico {
   phone?: string;
   status: string;
   mfa: Record<string, any>;
+  createdBy: string;
+  createdByChannel?: string;
   createdAt: string;
+  updatedBy: string;
+  updatedByChannel?: string;
   updatedAt: string;
 }
 
@@ -49,10 +57,16 @@ export interface UsuarioPublico {
 export interface SesionDynamo {
   pk: string;              // TENANT#<tenant>#USER#<userId>
   sk: string;              // SESSION#<hashRefreshToken>
+  tenant: string;          // GREIP
+  userId: string;          // UUID
   refreshTokenHash: string;
   userAgent?: string;
   ip?: string;
+  createdBy: string;       // email/userId que inicio la sesion
+  createdByChannel?: string;
   createdAt: string;
+  updatedBy: string;       // email/userId de la ultima actualizacion
+  updatedByChannel?: string;
   updatedAt: string;
   expiresAt: number;       // TTL epoch seg
 }
@@ -70,6 +84,8 @@ export interface AuditoriaEvento {
   sourceIp?: string;
   userAgent?: string;
   detail?: any;
+  createdBy: string;       // email/userId que origino el evento
+  createdByChannel?: string;
   date: string;            // ISO
   expiresAt: number;       // TTL epoch seg
 }
@@ -78,24 +94,34 @@ export interface AuditoriaEvento {
 export interface FactorMfaDynamo {
   pk: string;              // TENANT#<tenant>#USER#<userId>
   sk: string;              // TOTP | SMS | EMAIL | CHALLENGE#<uuid>
+  tenant: string;          // GREIP
+  userId: string;          // UUID
   channel: string;
   active: boolean;
   verified: boolean;
   secret?: string;         // TOTP: secret base32
   phone?: string;          // SMS: destino
   email?: string;          // EMAIL: destino
+  createdBy: string;       // email/userId que registro el factor
+  createdByChannel?: string;
   createdAt: string;
+  updatedBy: string;       // email/userId de la ultima actualizacion
+  updatedByChannel?: string;
   updatedAt: string;
 }
 
 export interface DesafioDynamo {
   pk: string;              // TENANT#<tenant>#USER#<userId>
   sk: string;              // CHALLENGE#<uuid>
+  tenant: string;          // GREIP
+  userId: string;          // UUID
   type: string;            // MFA | RESET
   channel: string;         // SMS | EMAIL | TOTP
   codeHash: string;        // sha256 del codigo OTP
   attempts: number;
   expiresAt: string;       // ISO
+  createdBy: string;       // email/userId que genero el desafio
+  createdByChannel?: string;
   createdAt: string;
   ttl: number;             // TTL epoch seg
 }
@@ -106,10 +132,18 @@ export interface TenantRow {
   code: string;
   name: string;
   status: string;
+  created_by: string;
+  created_by_channel?: string;
+  created_at: string;
+  updated_by: string;
+  updated_by_channel?: string;
+  updated_at: string;
 }
 
 export interface PersonaRow {
   id: number;
+  person_id?: number;
+  user_id?: string;
   tenant_id: number;
   first_name: string;
   father_last_name: string;
@@ -119,6 +153,12 @@ export interface PersonaRow {
   email: string;
   phone: string | null;
   status: string;
+  created_by: string;
+  created_by_channel?: string;
+  created_at: string;
+  updated_by: string;
+  updated_by_channel?: string;
+  updated_at: string;
 }
 
 export interface RolRow {
@@ -128,6 +168,12 @@ export interface RolRow {
   name: string;
   description: string | null;
   status: string;
+  created_by: string;
+  created_by_channel?: string;
+  created_at: string;
+  updated_by: string;
+  updated_by_channel?: string;
+  updated_at: string;
 }
 
 export interface PermisoRow {
@@ -137,6 +183,12 @@ export interface PermisoRow {
   name: string;
   description: string | null;
   status: string;
+  created_by: string;
+  created_by_channel?: string;
+  created_at: string;
+  updated_by: string;
+  updated_by_channel?: string;
+  updated_at: string;
 }
 
 export interface PoliticaContrasena {
@@ -153,8 +205,9 @@ export interface PoliticaContrasena {
 // ---- Identidad extraida del JWT ----
 export interface Identidad {
   sub: string;             // userId
-  tenant: string;
-  channel?: string;
+  tenant: string;          // codigo del tenant (ej. GREIP)
+  tenantId?: number;       // id numerico del tenant en PostgreSQL
+  channel?: string;        // canal donde se genero el token (AppWeb, AppMovil, Chatbot, Whatsapp)
   type: string;            // ACCESS | MFA | RESET
   exp?: number;
   permissions?: string[];

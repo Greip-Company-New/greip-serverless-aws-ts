@@ -6,11 +6,22 @@ info:
 
     - `service-security`: autenticación, usuarios + RBAC y auditoría.
     - `service-catalogs`: catálogo de productos.
+    - `service-cross`: notificaciones (email/SMS) y cifrado de data de tokens.
 
     **Autenticación:**
     - Todos los endpoints requieren la API Key por header `x-api-key` (usage plan de API Gateway).
     - Los endpoints de `service-security` (salvo login/MFA/refresh/recuperación) requieren además
       `Authorization: Bearer <accessToken>` (JWT RS256) y permisos RBAC.
+    - Los endpoints de `service-catalogs` (`/product`) requieren también
+      `Authorization: Bearer <accessToken>` (JWT RS256). El `createdBy`/`updatedBy` de los
+      productos se toma del `sub` (userId) del token, y el `tenantId` (aislamiento por empresa)
+      se toma del `tenantId` incluido en el token — nunca del request del cliente.
+    - **Multicanal**: el canal es **obligatorio** y se envía **solo por header** `channel`
+      (valores permitidos: `AppWeb`, `AppMovil`, `Chatbot`, `Whatsapp`). No se acepta en
+      body, query ni path. El access token se genera con el canal del login y **solo es
+      válido para ese canal**: si un token emitido para `AppMovil` se usa con header
+      `channel: AppWeb`, se rechaza con 401. El canal se persiste en los atributos de
+      auditoría `createdByChannel` / `updatedByChannel` de cada entidad.
 
     **Envoltorio de respuestas:**
     - En **éxito** (200/201) el body es el objeto `Response` directamente:
@@ -28,6 +39,8 @@ servers:
     description: DEV - service-security (us-east-2)
   - url: https://apidev.greip.com.pe/srv-catalogs
     description: DEV - service-catalogs (us-east-2)
+  - url: https://apidev.greip.com.pe/srv-cross
+    description: DEV - service-cross (us-east-2)
 tags:
   - name: Auth
     description: Autenticación y gestión de contraseñas (service-security)
@@ -37,6 +50,10 @@ tags:
     description: Consulta de auditoría (service-security)
   - name: Product
     description: Catálogo de productos (service-catalogs)
+  - name: Notification
+    description: Notificaciones email/SMS (service-cross)
+  - name: Crypto
+    description: Cifrado y descifrado de data de tokens (service-cross)
 
 security:
   - ApiKeyAuth: []
@@ -179,6 +196,8 @@ paths:
       tags: [Auth]
       summary: "Cerrar sesión (opcional: revocar todas las sesiones)"
       operationId: authLogout
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       requestBody:
         required: true
         content:
@@ -212,6 +231,8 @@ paths:
       tags: [Auth]
       summary: Cambiar contraseña (requiere sesión activa)
       operationId: authChangePassword
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       requestBody:
         required: true
         content:
@@ -315,6 +336,8 @@ paths:
       tags: [User]
       summary: Crear usuario (perfil en DynamoDB + persona en PostgreSQL)
       operationId: userCreate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       requestBody:
         required: true
         content:
@@ -341,6 +364,7 @@ paths:
       summary: Listar usuarios (paginado y filtros)
       operationId: userList
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
         - name: status
@@ -379,6 +403,7 @@ paths:
       summary: Obtener usuario con persona, roles y permisos
       operationId: userGet
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
       responses:
         "200":
@@ -400,6 +425,7 @@ paths:
       summary: Actualizar datos del usuario
       operationId: userUpdate
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
       requestBody:
         required: true
@@ -427,6 +453,7 @@ paths:
       summary: Eliminar usuario (borrado lógico, status=I)
       operationId: userDelete
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
       responses:
         "200":
@@ -448,6 +475,7 @@ paths:
       summary: Asignar roles a un usuario
       operationId: userAssignRoles
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
       requestBody:
         required: true
@@ -484,6 +512,7 @@ paths:
       summary: Quitar un rol de un usuario
       operationId: userRemoveRole
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
         - $ref: "#/components/parameters/RoleId"
       responses:
@@ -506,6 +535,7 @@ paths:
       summary: Obtener permisos efectivos de un usuario
       operationId: userGetPermissions
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/UserId"
       responses:
         "200":
@@ -524,6 +554,8 @@ paths:
       tags: [User]
       summary: Listar roles
       operationId: roleList
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       responses:
         "200":
           description: Lista de roles (`data` es un array de `Role`).
@@ -539,6 +571,8 @@ paths:
       tags: [User]
       summary: Crear rol
       operationId: roleCreate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       requestBody:
         required: true
         content:
@@ -573,11 +607,205 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /role/{roleId}:
+    get:
+      tags: [User]
+      summary: Obtener rol con sus permisos
+      operationId: roleGet
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+      responses:
+        "200":
+          description: Rol con su lista de `permissions`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleWithPermissionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags: [User]
+      summary: Actualizar rol
+      operationId: roleUpdate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: Código único del rol.
+                name:
+                  type: string
+                  description: Nombre descriptivo del rol.
+                description:
+                  type: string
+                  description: Descripción del rol.
+                status:
+                  type: string
+                  enum: [A, I]
+                  description: Estado del rol (A=activo, I=inactivo).
+      responses:
+        "200":
+          description: Rol actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleUpdatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags: [User]
+      summary: Eliminar rol
+      operationId: roleDelete
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+      responses:
+        "200":
+          description: "Rol eliminado (data: { deleted: true })."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /role/{roleId}/permissions:
+    get:
+      tags: [User]
+      summary: Listar permisos asignados a un rol
+      operationId: rolePermissionsList
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+      responses:
+        "200":
+          description: Lista de permisos del rol.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RolePermissionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [User]
+      summary: Asignar permisos a un rol
+      operationId: rolePermissionsAssign
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissions]
+              properties:
+                permissions:
+                  type: array
+                  items:
+                    type: integer
+                  description: IDs de los permisos a asignar al rol.
+                  example: [1, 2, 3]
+      responses:
+        "200":
+          description: Permisos asignados; `data.permissions` es la lista resultante.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RolePermissionsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /role/{roleId}/permissions/{permissionId}:
+    delete:
+      tags: [User]
+      summary: Quitar un permiso de un rol
+      operationId: rolePermissionRemove
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del rol.
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del permiso a quitar.
+      responses:
+        "200":
+          description: "Permiso quitado (data: { removed: true })."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemovedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /permission:
     get:
       tags: [User]
       summary: Listar permisos disponibles
       operationId: permissionList
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       responses:
         "200":
           description: Lista de permisos (`data` es un array de `Permission`).
@@ -589,89 +817,300 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-
-  # =========================================================
-  # AUDIT (service-security)
-  # =========================================================
-  /audit:
-    get:
-      tags: [Audit]
-      summary: Listar eventos de auditoría (paginado y filtros)
-      operationId: auditList
+    post:
+      tags: [User]
+      summary: Crear permiso
+      operationId: permissionCreate
       parameters:
-        - $ref: "#/components/parameters/Page"
-        - $ref: "#/components/parameters/PageSize"
-        - name: dateFrom
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: Fecha inicial (ISO 8601)
-        - name: dateTo
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: Fecha final (ISO 8601)
-        - name: action
-          in: query
-          schema:
-            type: string
-            example: USER_CREATED
-          description: Filtro por acción (USER_LOGIN, USER_CREATED, ...)
-        - name: entity
-          in: query
-          schema:
-            type: string
-            enum: [USER, SESSION, ROLE, MFA, AUDIT]
-          description: Filtro por entidad
-        - name: actor
-          in: query
-          schema:
-            type: string
-          description: Filtro por actor (email o userId)
+        - $ref: "#/components/parameters/Channel"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code:
+                  type: string
+                  description: Código único del permiso (ej. reports.read).
+                name:
+                  type: string
+                  description: Nombre descriptivo del permiso.
+                description:
+                  type: string
+                  description: Descripción del permiso.
       responses:
-        "200":
-          description: |
-            Lista paginada de eventos de auditoría. `data` es un array de `AuditEvent`
-            y `metadata.pagination` contiene la paginación.
+        "201":
+          description: Permiso creado.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuditListResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-
-  /audit/{sk}:
-    get:
-      tags: [Audit]
-      summary: Obtener un evento de auditoría por su sort key
-      operationId: auditGet
-      parameters:
-        - name: sk
-          in: path
-          required: true
-          schema:
-            type: string
-            example: EVENT#2026-08-07T12:00:00.000Z#abc123
-          description: Sort key del evento (formato EVENT#<fechaISO>#<eventId>)
-      responses:
-        "200":
-          description: Evento de auditoría (`data` es un `AuditEvent`).
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuditGetResponse"
+                $ref: "#/components/schemas/PermissionCreatedResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+
+  /permission/{permissionId}:
+    put:
+      tags: [User]
+      summary: Actualizar permiso
+      operationId: permissionUpdate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del permiso.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: Código único del permiso.
+                name:
+                  type: string
+                  description: Nombre descriptivo del permiso.
+                description:
+                  type: string
+                  description: Descripción del permiso.
+                status:
+                  type: string
+                  enum: [A, I]
+                  description: Estado del permiso.
+      responses:
+        "200":
+          description: Permiso actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionUpdatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags: [User]
+      summary: Eliminar permiso
+      operationId: permissionDelete
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del permiso.
+      responses:
+        "200":
+          description: "Permiso eliminado (data: { deleted: true })."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /tenant:
+    post:
+      tags: [Tenant]
+      summary: Crear tenant (empresa)
+      operationId: tenantCreate
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code:
+                  type: string
+                  description: Código único del tenant (ej. NUEVO).
+                name:
+                  type: string
+                  description: Nombre de la empresa.
+                status:
+                  type: string
+                  enum: [A, I]
+                  description: Estado del tenant (por defecto A).
+      responses:
+        "201":
+          description: Tenant creado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Resumen de métricas del sistema
+      operationId: dashboardSummary
+      description: |
+        Devuelve contadores agregados del tenant actual: usuarios, roles,
+        permisos, productos y eventos de auditoría (totales y activos).
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Tenant para el resumen (por defecto el del token).
+      responses:
+        "200":
+          description: Resumen de métricas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # =========================================================
+  # AUDIT (service-security)
+  # =========================================================
+  /entity-audit:
+    get:
+      tags: [Audit]
+      summary: Consultar el historial de cambios de una entidad (logs de auditoría)
+      operationId: entityAuditList
+      description: |
+        Devuelve el histórico de cambios de una entidad concreta consultando por
+        `entity` + `entityKey` + `tenantId` (usado por las pantallas para mostrar
+        los logs de una entidad). Ordenado de más reciente a más antiguo.
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: entity
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Nombre de la entidad (product, user, role, permission, user_group).
+          example: product
+        - name: entityKey
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Identificador del registro (id de producto, userId, roleId, ...).
+          example: "5"
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Tenant (empresa) al que pertenece el registro.
+          example: 1
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtro por acción/evento (USER_CREATED, PRODUCT_CREATED, USER_LOGIN, ...).
+          example: PRODUCT_CREATED
+        - name: sourceIp
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtro por IP de origen de la petición.
+        - name: userAgent
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtro por user-agent (búsqueda parcial).
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: |
+            Lista paginada de cambios de la entidad. `data` es un array de `EntityChangeLog`
+            y `metadata.pagination` contiene la paginación.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityChangeLogListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /entity-audit/user:
+    get:
+      tags: [Audit]
+      summary: Consultar los movimientos del usuario autenticado (userId del token)
+      operationId: entityAuditListByUser
+      description: |
+        Devuelve el histórico de todos los cambios/eventos en los que el usuario
+        autenticado (identidad del accessToken) fue actor. No recibe parámetros
+        de identificación; el userId se obtiene del token. Ordenado de más reciente a más antiguo.
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Channel"
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtro por acción/evento (USER_CREATED, PRODUCT_CREATED, USER_LOGIN, ...).
+        - name: entity
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtro por entidad (product, user, role, ...).
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: |
+            Lista paginada de movimientos del usuario autenticado. `data` es un array de `EntityChangeLog`
+            y `metadata.pagination` contiene la paginación.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityChangeLogListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   # =========================================================
   # PRODUCT (service-catalogs)
@@ -681,7 +1120,11 @@ paths:
       tags: [Product]
       summary: Listar productos (paginado y filtros)
       operationId: productList
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
         - name: status
@@ -710,6 +1153,11 @@ paths:
       tags: [Product]
       summary: Crear producto
       operationId: productCreate
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Channel"
       requestBody:
         required: true
         content:
@@ -731,7 +1179,11 @@ paths:
       tags: [Product]
       summary: Obtener producto por id
       operationId: productGet
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/ProductId"
       responses:
         "200":
@@ -742,13 +1194,19 @@ paths:
                 $ref: "#/components/schemas/ProductResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
     put:
       tags: [Product]
       summary: Actualizar producto
       operationId: productUpdate
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/ProductId"
       requestBody:
         required: true
@@ -765,13 +1223,19 @@ paths:
                 $ref: "#/components/schemas/ProductResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
       tags: [Product]
       summary: Eliminar producto
       operationId: productDelete
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Channel"
         - $ref: "#/components/parameters/ProductId"
       responses:
         "200":
@@ -782,8 +1246,120 @@ paths:
                 $ref: "#/components/schemas/DeletedResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  # =========================================================
+  # CROSS (service-cross)
+  # =========================================================
+  /cross/email:
+    post:
+      tags: [Notification]
+      summary: Enviar un correo electrónico vía SES
+      operationId: crossSendEmail
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendEmailRequest"
+      responses:
+        "200":
+          description: 'Correo encolado en SES (`data: { messageId }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendEmailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /cross/sms:
+    post:
+      tags: [Notification]
+      summary: Enviar un SMS vía SNS
+      operationId: crossSendSms
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendSmsRequest"
+      responses:
+        "200":
+          description: 'SMS publicado en SNS (`data: { messageId }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendSmsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /cross/token/encrypt:
+    post:
+      tags: [Crypto]
+      summary: Cifrar la data que viaja dentro del token JWT (AES)
+      operationId: crossEncryptTokenData
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  description: 'Data a cifrar (objeto con claims del token: sub, tenant, roles, permissions, etc.).'
+                  type: object
+                  example:
+                    sub: 550e8400-e29b-41d4-a716-446655440000
+                    tenant: GREIP
+                    roles: [ADMIN]
+      responses:
+        "200":
+          description: 'Data cifrada (`data: { encrypted, algorithm }`).'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EncryptTokenDataResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /cross/token/decrypt:
+    post:
+      tags: [Crypto]
+      summary: Descifrar la data cifrada del token JWT (AES)
+      operationId: crossDecryptTokenData
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [encrypted]
+              properties:
+                encrypted:
+                  type: string
+                  description: Valor cifrado devuelto por /cross/token/encrypt.
+                  example: 35424e37412d6d5e15b5559ff4e661...
+      responses:
+        "200":
+          description: 'Data descifrada (`data: { decrypted, algorithm }`). `decrypted` es el JSON parseado si el texto era un objeto, o el string original en caso contrario.'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecryptTokenDataResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
 components:
   securitySchemes:
@@ -799,6 +1375,14 @@ components:
       description: Access token JWT RS256 emitido por /auth/login.
 
   parameters:
+    Channel:
+      name: channel
+      in: header
+      required: true
+      schema:
+        type: string
+        enum: [AppWeb, AppMovil, Chatbot, Whatsapp]
+      description: Canal desde el que se consume la API. Obligatorio y solo por header (nunca en body/query/path); el token solo es válido para el canal con el que fue generado.
     Page:
       name: page
       in: query
@@ -1264,8 +1848,150 @@ components:
               items:
                 $ref: "#/components/schemas/Permission"
 
+    RoleUpdatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Role"
+
+    RoleWithPermissionsResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: "#/components/schemas/Role"
+                - type: object
+                  properties:
+                    permissions:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/Permission"
+
+    RolePermissionsResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [roleId, permissions]
+              properties:
+                roleId:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Permission"
+
+    RemovedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [removed]
+              properties:
+                removed:
+                  type: boolean
+                  example: true
+
+    PermissionCreatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Permission"
+
+    PermissionUpdatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Permission"
+
+    TenantCreatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [id, code, name, status]
+              properties:
+                id:
+                  type: integer
+                code:
+                  type: string
+                name:
+                  type: string
+                status:
+                  type: string
+                  enum: [A, I]
+
+    DashboardSummaryResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [tenant, users, roles, permissions, products, audit]
+              properties:
+                tenant:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    code:
+                      type: string
+                    name:
+                      type: string
+                users:
+                  type: object
+                  properties:
+                    active:
+                      type: integer
+                    total:
+                      type: integer
+                roles:
+                  type: object
+                  properties:
+                    active:
+                      type: integer
+                    total:
+                      type: integer
+                permissions:
+                  type: object
+                  properties:
+                    active:
+                      type: integer
+                    total:
+                      type: integer
+                products:
+                  type: object
+                  properties:
+                    active:
+                      type: integer
+                    total:
+                      type: integer
+                audit:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    last24h:
+                      type: integer
+
     # ===================== AUDIT =====================
-    AuditListResponse:
+    # ===================== ENTITY CHANGE LOG (service-security) =====================
+    EntityChangeLogListResponse:
       allOf:
         - $ref: "#/components/schemas/ApiEnvelope"
         - type: object
@@ -1273,20 +1999,85 @@ components:
             data:
               type: array
               items:
-                $ref: "#/components/schemas/AuditEvent"
+                $ref: "#/components/schemas/EntityChangeLog"
             metadata:
               type: object
               properties:
                 pagination:
                   $ref: "#/components/schemas/Pagination"
 
-    AuditGetResponse:
-      allOf:
-        - $ref: "#/components/schemas/ApiEnvelope"
-        - type: object
-          properties:
-            data:
-              $ref: "#/components/schemas/AuditEvent"
+    EntityChangeLog:
+      type: object
+      description: Entrada del histórico de cambios de una entidad (tabla greip.entity_change_log).
+      properties:
+        id:
+          type: string
+          description: Identificador del registro de auditoría.
+        entity:
+          type: string
+          description: Entidad afectada (product, user, role, permission, user_group).
+          example: product
+        entity_key:
+          type: string
+          description: Identificador del registro afectado.
+          example: "5"
+        tenant_id:
+          type: integer
+          description: Tenant (empresa) al que pertenece el cambio.
+        change_type:
+          type: string
+          nullable: true
+          description: Tipo de cambio de datos (CREATE, UPDATE, DELETE, ASSIGN, REMOVE). null en eventos de seguridad.
+          example: UPDATE
+        action:
+          type: string
+          nullable: true
+          description: Acción/evento de seguridad (USER_CREATED, USER_LOGIN, PRODUCT_CREATED, PASSWORD_CHANGED, ...).
+          example: USER_CREATED
+        status:
+          type: string
+          description: Estado resultante del registro (A=activo, I=inactivo).
+        user_id:
+          type: string
+          description: Usuario (userId) que realizó el cambio.
+          example: be347ee0-25b1-4140-aa1c-de5f595266cb
+        user_first_name:
+          type: string
+          nullable: true
+          description: Nombre de la persona que realizó el cambio.
+        user_father_last_name:
+          type: string
+          nullable: true
+          description: Apellido paterno de la persona que realizó el cambio.
+        user_mother_last_name:
+          type: string
+          nullable: true
+          description: Apellido materno de la persona que realizó el cambio.
+        channel:
+          type: string
+          description: Canal desde el que se realizó el cambio.
+          example: AppWeb
+        source_ip:
+          type: string
+          nullable: true
+          description: IP de origen de la petición.
+        user_agent:
+          type: string
+          nullable: true
+          description: User-Agent del cliente.
+        changes:
+          type: object
+          description: |
+            Atributos que cambiaron; cada atributo lleva `before` y `after`.
+            Ejemplo: `{ "name": { "before": "Mansana", "after": "Manzana" } }`.
+          example:
+            name:
+              before: Mansana
+              after: Manzana
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha/hora en que se realizó el cambio.
 
     # ===================== PRODUCT =====================
     ProductListResponse:
@@ -1325,6 +2116,10 @@ components:
           type: string
           description: Código del tenant (empresa) al que pertenece.
           example: GREIP
+        tenantId:
+          type: integer
+          description: Identificador numérico del tenant en PostgreSQL (usado para consultar auditoría).
+          example: 1
         email:
           type: string
           format: email
@@ -1364,10 +2159,26 @@ components:
               $ref: "#/components/schemas/MfaFactor"
             email:
               $ref: "#/components/schemas/MfaFactor"
+        createdBy:
+          type: string
+          description: Email/userId que creó el registro (SYSTEM si fue automático).
+          example: admin@greip.com.pe
+        createdByChannel:
+          type: string
+          description: Canal desde el que se creó (AppWeb, AppMovil, Chatbot, Whatsapp).
+          example: AppWeb
         createdAt:
           type: string
           format: date-time
           description: Fecha/hora de creación del registro.
+        updatedBy:
+          type: string
+          description: Email/userId de la última actualización.
+          example: admin@greip.com.pe
+        updatedByChannel:
+          type: string
+          description: Canal desde el que se realizó la última actualización.
+          example: AppMovil
         updatedAt:
           type: string
           format: date-time
@@ -1420,6 +2231,22 @@ components:
         status:
           type: string
           description: Estado de la persona (A=activo, I=inactivo).
+        created_by:
+          type: string
+          description: Email/userId que creó el registro (SYSTEM si fue automático).
+          example: admin@greip.com.pe
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de creación del registro.
+        updated_by:
+          type: string
+          description: Email/userId de la última actualización.
+          example: admin@greip.com.pe
+        updated_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de la última actualización.
 
     Role:
       type: object
@@ -1445,6 +2272,22 @@ components:
         status:
           type: string
           description: Estado del rol (A=activo, I=inactivo).
+        created_by:
+          type: string
+          description: Email/userId que creó el registro.
+          example: admin@greip.com.pe
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de creación del registro.
+        updated_by:
+          type: string
+          description: Email/userId de la última actualización.
+          example: admin@greip.com.pe
+        updated_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de la última actualización.
 
     Permission:
       type: object
@@ -1470,60 +2313,22 @@ components:
         status:
           type: string
           description: Estado del permiso (A=activo, I=inactivo).
-
-    AuditEvent:
-      type: object
-      description: Evento de auditoría (DynamoDB TBL_GREIP_SEGURIDAD_AUDITORIA).
-      properties:
-        pk:
+        created_by:
           type: string
-          description: Partition key del evento (formato TENANT#<tenant>).
-          example: TENANT#GREIP
-        sk:
-          type: string
-          description: Sort key del evento (formato EVENT#<fechaISO>#<eventId>).
-          example: EVENT#2026-08-07T12:00:00.000Z#abc123
-        eventId:
-          type: string
-          description: Identificador único del evento.
-        tenant:
-          type: string
-          description: Código del tenant al que pertenece el evento.
-        action:
-          type: string
-          description: Acción registrada (USER_LOGIN, USER_CREATED, ...).
-          example: USER_CREATED
-        entity:
-          type: string
-          description: Tipo de entidad afectada.
-          enum: [USER, SESSION, ROLE, MFA, AUDIT]
-        entityId:
-          type: string
-          nullable: true
-          description: Identificador de la entidad afectada (opcional).
-        actor:
-          type: string
-          nullable: true
-          description: Usuario que ejecutó la acción (email o userId).
-        sourceIp:
-          type: string
-          nullable: true
-          description: IP de origen de la solicitud.
-        userAgent:
-          type: string
-          nullable: true
-          description: User-Agent del cliente.
-        detail:
-          type: object
-          nullable: true
-          description: Detalles adicionales del evento (varía por acción).
-        date:
+          description: Email/userId que creó el registro.
+          example: admin@greip.com.pe
+        created_at:
           type: string
           format: date-time
-          description: Fecha/hora del evento (ISO 8601).
-        expiresAt:
-          type: integer
-          description: TTL (epoch segundos)
+          description: Fecha/hora de creación del registro.
+        updated_by:
+          type: string
+          description: Email/userId de la última actualización.
+          example: admin@greip.com.pe
+        updated_at:
+          type: string
+          format: date-time
+          description: Fecha/hora de la última actualización.
 
     Product:
       type: object
@@ -1532,6 +2337,9 @@ components:
         productId:
           type: integer
           description: Identificador único del producto.
+        tenantId:
+          type: integer
+          description: Identificador del tenant (empresa) al que pertenece.
         name:
           type: string
           description: Nombre del producto.
@@ -1551,10 +2359,26 @@ components:
           type: string
           description: Estado del producto (A=activo, I=inactivo).
           enum: [A, I]
+        createdBy:
+          type: string
+          description: Email/userId que creó el registro.
+          example: admin@greip.com.pe
+        createdByChannel:
+          type: string
+          description: Canal desde el que se creó (AppWeb, AppMovil, Chatbot, Whatsapp).
+          example: AppWeb
         createdAt:
           type: string
           format: date-time
           description: Fecha/hora de creación del registro.
+        updatedBy:
+          type: string
+          description: Email/userId de la última actualización.
+          example: admin@greip.com.pe
+        updatedByChannel:
+          type: string
+          description: Canal desde el que se realizó la última actualización.
+          example: AppMovil
         updatedAt:
           type: string
           format: date-time
@@ -1636,6 +2460,10 @@ components:
       type: object
       required: [name, price]
       properties:
+        createdBy:
+          type: string
+          description: Email/userId del solicitante (auditoría; opcional, se ignora si viene el token).
+          example: admin@greip.com.pe
         name:
           type: string
           description: Nombre del producto.
@@ -1660,3 +2488,118 @@ components:
           description: Estado del producto.
           enum: [A, I]
           default: A
+
+    # ===================== CROSS (service-cross) =====================
+    SendEmailRequest:
+      type: object
+      required: [to]
+      properties:
+        to:
+          type: array
+          description: Destinatarios del correo (mínimo 1).
+          items:
+            type: string
+            format: email
+          example: ["destino@greip.com.pe"]
+        subject:
+          type: string
+          maxLength: 200
+          description: Asunto del correo.
+          example: Notificacion GREIP COMPANY
+        html:
+          type: string
+          description: Cuerpo del correo en HTML (alternativa a `text`).
+        text:
+          type: string
+          description: Cuerpo del correo en texto plano (alternativa a `html`).
+        from:
+          type: string
+          format: email
+          description: 'Remitente (default: no-reply@greip.com.pe).'
+          example: no-reply@greip.com.pe
+        replyTo:
+          type: array
+          description: Direcciones de respuesta (opcional).
+          items:
+            type: string
+            format: email
+
+    SendEmailResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [messageId]
+              properties:
+                messageId:
+                  type: string
+                  description: Id del mensaje devuelto por SES.
+                  example: "0100017f00000000-00000000-0000-0000-000000000000-000000"
+
+    SendSmsRequest:
+      type: object
+      required: [phoneNumber, message]
+      properties:
+        phoneNumber:
+          type: string
+          pattern: "^\\+?[0-9]{9,15}$"
+          description: Número de teléfono de destino (formato internacional).
+          example: "+51999888777"
+        message:
+          type: string
+          maxLength: 1600
+          description: Contenido del SMS.
+          example: "GREIP: tu codigo de verificacion es 123456"
+
+    SendSmsResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [messageId]
+              properties:
+                messageId:
+                  type: string
+                  description: Id del mensaje devuelto por SNS.
+                  example: "5c5f3c2a-9a3a-4f8b-9b4a-2f1c6f9e0000"
+
+    EncryptTokenDataResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [encrypted, algorithm]
+              properties:
+                encrypted:
+                  type: string
+                  description: Data cifrada en hexadecimal (AES-CBC).
+                algorithm:
+                  type: string
+                  description: Algoritmo usado (aes-256-cbc).
+                  example: aes-256-cbc
+
+    DecryptTokenDataResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [decrypted, algorithm]
+              properties:
+                decrypted:
+                  description: 'Data descifrada: objeto JSON si el texto descifrado era un objeto, o el string original en caso contrario.'
+                  example:
+                    sub: 550e8400-e29b-41d4-a716-446655440000
+                    tenant: GREIP
+                    roles: [ADMIN]
+                algorithm:
+                  type: string
+                  description: Algoritmo usado (aes-256-cbc).
+                  example: aes-256-cbc

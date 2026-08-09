@@ -132,6 +132,130 @@ export default class Validate {
     await this.validar(schema, payload);
   }
 
+  static async getRole(payload: any): Promise<void> {
+    const schema = Joi.object({
+      roleId: Joi.string().required(),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    });
+
+    await this.validar(schema, payload);
+  }
+
+  static async updateRole(payload: any): Promise<void> {
+    const schema = Joi.object({
+      roleId: Joi.string().required(),
+      code: Joi.string().min(2).max(50).optional(),
+      name: Joi.string().min(2).optional(),
+      description: Joi.string().optional().allow(''),
+      status: Joi.string().valid('A', 'I').optional(),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    }).min(2);
+
+    await this.validar(schema, payload);
+  }
+
+  static async deleteRole(payload: any): Promise<void> {
+    const schema = Joi.object({
+      roleId: Joi.string().required(),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    });
+
+    await this.validar(schema, payload);
+  }
+
+  static async getRolePermissions(payload: any): Promise<void> {
+    const schema = Joi.object({
+      roleId: Joi.string().required(),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    });
+
+    await this.validar(schema, payload);
+  }
+
+  static async assignRolePermissions(payload: any): Promise<void> {
+    const schema = Joi.object({
+      roleId: Joi.string().required(),
+      permissions: Joi.array().items(Joi.string()).min(1).required(),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    });
+
+    await this.validar(schema, payload);
+  }
+
+  static async removeRolePermission(payload: any): Promise<void> {
+    const schema = Joi.object({
+      roleId: Joi.string().required(),
+      permissionId: Joi.string().required(),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    });
+
+    await this.validar(schema, payload);
+  }
+
+  static async createPermission(payload: any): Promise<void> {
+    const schema = Joi.object({
+      code: Joi.string().min(2).max(100).required(),
+      name: Joi.string().min(2).required(),
+      description: Joi.string().optional().allow(''),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    });
+
+    await this.validar(schema, payload);
+  }
+
+  static async updatePermission(payload: any): Promise<void> {
+    const schema = Joi.object({
+      permissionId: Joi.string().required(),
+      code: Joi.string().min(2).max(100).optional(),
+      name: Joi.string().min(2).optional(),
+      description: Joi.string().optional().allow(''),
+      status: Joi.string().valid('A', 'I').optional(),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    }).min(2);
+
+    await this.validar(schema, payload);
+  }
+
+  static async deletePermission(payload: any): Promise<void> {
+    const schema = Joi.object({
+      permissionId: Joi.string().required(),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    });
+
+    await this.validar(schema, payload);
+  }
+
+  static async createTenant(payload: any): Promise<void> {
+    const schema = Joi.object({
+      code: Joi.string().min(2).max(50).required(),
+      name: Joi.string().min(2).required(),
+      status: Joi.string().valid('A', 'I').optional(),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    });
+
+    await this.validar(schema, payload);
+  }
+
+  static async dashboardSummary(payload: any): Promise<void> {
+    const schema = Joi.object({
+      tenantId: Joi.number().integer().min(1).optional(),
+      requestId: Joi.string().optional(),
+      headers: Joi.object().optional().unknown(true)
+    });
+
+    await this.validar(schema, payload);
+  }
+
   private static async validar(schema: Joi.ObjectSchema, payload: any): Promise<void> {
     try {
       await schema.validateAsync(payload, { abortEarly: false, allowUnknown: true });

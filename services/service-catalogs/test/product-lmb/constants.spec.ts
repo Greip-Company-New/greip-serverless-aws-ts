@@ -1,4 +1,5 @@
-import { PRODUCT_STATUS, CURRENCIES, DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '../../src/product-lmb/constants';
+import { PRODUCT_STATUS, CURRENCIES } from '../../src/product-lmb/constants';
+import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from 'ly-nodejs-ts-common';
 
 describe('constants product-lmb', () => {
   it('PRODUCT_STATUS contiene los estados validos', () => {

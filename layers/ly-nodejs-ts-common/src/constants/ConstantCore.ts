@@ -130,10 +130,16 @@ export const CODIGO_TELEFONO_PAIS = {
 }
 
 export const CANALES = [
-  'Web',
-  'Portal',
-  'App'
+  'AppWeb',
+  'AppMovil',
+  'Chatbot',
+  'Whatsapp'
 ]
+
+// Valores por defecto de paginacion de las APIs (listas paginadas).
+export const DEFAULT_PAGE = 1;
+export const DEFAULT_PAGE_SIZE = 10;
+export const MAX_PAGE_SIZE = 100;
 
 export const CRYPTO_LEVEL = {
   SOFT: 'SOFT',

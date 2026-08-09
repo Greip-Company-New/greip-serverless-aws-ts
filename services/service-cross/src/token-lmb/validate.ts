@@ -5,7 +5,6 @@ export default class Validate {
   static async encryptTokenData(payload: any): Promise<void> {
     const schema = Joi.object({
       requestId: Joi.string().optional(),
-      canal: Joi.string().optional(),
       headers: Joi.object().optional().unknown(true),
       data: Joi.any().required().invalid(null),
     });
@@ -23,7 +22,6 @@ export default class Validate {
   static async decryptTokenData(payload: any): Promise<void> {
     const schema = Joi.object({
       requestId: Joi.string().optional(),
-      canal: Joi.string().optional(),
       headers: Joi.object().optional().unknown(true),
       encrypted: Joi.string().min(1).required(),
     });

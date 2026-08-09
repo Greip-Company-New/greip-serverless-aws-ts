@@ -13,7 +13,7 @@ layers/
 services/
   service-catalogs/           # microservicio de catalogos (catálogo de productos, Postgres en EC2) — nuevo, pendiente de deploy
   service-security/           # microservicio de seguridad (auth, usuarios+RBAC, auditoría; DynamoDB + Postgres) — completo en DEV
-  service-canales/            # microservicio de canales (usuarios, archivos, DynamoDB + S3) — pendiente
+  service-cross/               # microservicio transversal (email, SMS, cifrado token) — estructura completa
 api-contracts/                # contratos OpenAPI 3.0.3 (validación con npm test)
 infra/                        # bootstrap de infraestructura (VPC, IAM, EC2 Postgres, storage DynamoDB/S3)
 ```

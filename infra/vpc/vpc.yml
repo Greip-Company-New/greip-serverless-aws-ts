@@ -221,6 +221,39 @@ Resources:
         - !Ref SecretsManagerEndpointSecurityGroup
       PrivateDnsEnabled: true
 
+  # Interface endpoint (costo ~US$7/mes): SQS para la cola de auditoria.
+  # Sin NAT, las Lambdas en subred privada necesitan el endpoint para encolar
+  # los eventos de auditoria (Helpers.registerEntityChange -> greip-audit-<env>).
+  SqsEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG del endpoint de interfaz de SQS
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-SG-ENDPOINT-SQS-${Environment}'
+
+  SqsEndpointIngressFromLambda:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SqsEndpointSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  SqsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.sqs'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !Ref SqsEndpointSecurityGroup
+      PrivateDnsEnabled: true
+
   # Interface endpoint (costo ~US$7/mes): Lambda API para que service-security
   # invoque las Lambdas genericas de service-cross (SMS/email via SES/SNS).
   # Sin NAT, las Lambdas en subred privada no pueden alcanzar la API de Lambda.
@@ -319,6 +352,15 @@ Resources:
       FromPort: 443
       ToPort: 443
       DestinationSecurityGroupId: !Ref LambdaEndpointSecurityGroup
+
+  LambdaEgressToSqsEndpoint:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref SqsEndpointSecurityGroup
 
   # Egress 443 al prefix list de DynamoDB (gateway endpoint). Sin esta regla,
   # el trafico de las Lambdas a DynamoDB se descarta y las llamadas se cuelgan.

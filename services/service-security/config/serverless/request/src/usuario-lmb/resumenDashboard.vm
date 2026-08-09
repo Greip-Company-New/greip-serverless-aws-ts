@@ -9,7 +9,7 @@
 
 {
   "origin": "API_GATEWAY_REST_EVENT",
-  "action": "getAudit",
+  "action": "dashboardSummary",
   #set( $body = $input.json("$") )
   "body": $body,
   #set( $map = $input.params().header )

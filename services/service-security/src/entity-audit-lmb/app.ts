@@ -1,6 +1,6 @@
 import controller from './controller';
 import { addMiddleware, bootstrap, ApiGatewayEvent } from 'ly-nodejs-ts-common';
-import AuthMiddleware from '../common/middlewares/auth';
+import { AuthMiddleware } from 'ly-nodejs-ts-common';
 import RbacMiddleware from '../common/middlewares/rbac';
 
 const RequestIdMiddleware = () => ({
@@ -13,11 +13,10 @@ const RequestIdMiddleware = () => ({
 
 addMiddleware(ApiGatewayEvent());
 addMiddleware(RequestIdMiddleware());
-addMiddleware(AuthMiddleware());
+addMiddleware(AuthMiddleware({ exclude: ['registerChange'] }));
 addMiddleware(RbacMiddleware({
     permissionsByAction: {
-        listAudit: ['audit.read'],
-        getAudit: ['audit.read']
+        listChanges: ['audit.read']
     }
 }));
 

@@ -145,10 +145,12 @@ export class UsuarioRepository {
   }
 }
 
-export function mapPublicUser(usuario: UsuarioDynamo): any {
+export function mapPublicUser(usuario: UsuarioDynamo, tenantId?: number, tenantName?: string): any {
   return {
     userId: usuario.userId,
     tenant: usuario.tenant,
+    tenantId,
+    tenantName,
     email: usuario.email,
     documentType: usuario.documentType,
     documentNumber: usuario.documentNumber,
@@ -162,7 +164,11 @@ export function mapPublicUser(usuario: UsuarioDynamo): any {
       sms: { active: usuario.mfa?.sms?.active || false, verified: usuario.mfa?.sms?.verified || false },
       email: { active: usuario.mfa?.email?.active || false, verified: usuario.mfa?.email?.verified || false }
     },
+    createdBy: usuario.createdBy,
+    createdByChannel: usuario.createdByChannel,
     createdAt: usuario.createdAt,
+    updatedBy: usuario.updatedBy,
+    updatedByChannel: usuario.updatedByChannel,
     updatedAt: usuario.updatedAt
   };
 }

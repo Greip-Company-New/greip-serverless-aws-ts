@@ -18,25 +18,19 @@ template: ${file(./config/serverless/response.vm)}
 statusCodes:
   400:
     pattern: '.*400.*'
-    template: ${file(./config/serverless/response.vm)}
+    template: "{\"payload\":$input.path('$.errorMessage')}"
   401:
     pattern: '.*401.*'
-    template: ${file(./config/serverless/response.vm)}
+    template: "{\"payload\":$input.path('$.errorMessage')}"
   403:
     pattern: '.*403.*'
-    template: ${file(./config/serverless/response.vm)}
+    template: "{\"payload\":$input.path('$.errorMessage')}"
   404:
     pattern: '.*404.*'
-    template: ${file(./config/serverless/response.vm)}
+    template: "{\"payload\":$input.path('$.errorMessage')}"
   422:
     pattern: '.*422.*'
-    template: ${file(./config/serverless/response.vm)}
+    template: "{\"payload\":$input.path('$.errorMessage')}"
   500:
     pattern: '.*500.*'
-    template: ${file(./config/serverless/response.vm)}
-  502:
-    pattern: '.*502.*'
-    template: ${file(./config/serverless/response.vm)}
-  503:
-    pattern: '.*503.*'
-    template: ${file(./config/serverless/response.vm)}
+    template: "{\"payload\":$input.path('$.errorMessage')}"

@@ -1,5 +1,7 @@
 services:
   service-catalogs:
     path: services/service-catalogs
-  service-canales:
-    path: services/service-canales
+  service-security:
+    path: services/service-security
+  service-cross:
+    path: services/service-cross

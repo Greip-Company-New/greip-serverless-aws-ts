@@ -22,20 +22,33 @@ export class MfaRepository {
     return await this.db.getItem(tablaMfa(), { pk: this.mfaPk(tenant, userId), sk: channel });
   }
 
-  async saveFactor(factor: FactorMfaDynamo): Promise<void> {
-    await this.db.putItem(tablaMfa(), factor);
+  async saveFactor(factor: FactorMfaDynamo, createdBy?: string): Promise<void> {
+    const ahora = new Date().toISOString();
+    const enriched: FactorMfaDynamo = {
+      ...factor,
+      tenant: factor.tenant,
+      userId: factor.userId,
+      createdBy: factor.createdBy || createdBy || 'SYSTEM',
+      createdAt: factor.createdAt || ahora,
+      updatedBy: createdBy || factor.updatedBy || 'SYSTEM',
+      updatedAt: ahora
+    };
+    await this.db.putItem(tablaMfa(), enriched);
   }
 
-  async createChallenge(tenant: string, userId: string, challengeId: string, type: string, channel: string, codeHash: string): Promise<void> {
+  async createChallenge(tenant: string, userId: string, challengeId: string, type: string, channel: string, codeHash: string, createdBy?: string): Promise<void> {
     const ahora = new Date();
     const desafio: DesafioDynamo = {
       pk: this.mfaPk(tenant, userId),
       sk: `CHALLENGE#${challengeId}`,
+      tenant,
+      userId,
       type,
       channel,
       codeHash,
       attempts: 0,
       expiresAt: new Date(ahora.getTime() + OTP_TTL_MIN * 60 * 1000).toISOString(),
+      createdBy: createdBy || 'SYSTEM',
       createdAt: ahora.toISOString(),
       ttl: Math.floor(Date.now() / 1000) + OTP_TTL_MIN * 60
     };

@@ -1,12 +1,11 @@
 // Servicio de autenticacion: login, MFA, refresh, logout, recuperacion de contrasena.
-import { LambdaService } from 'ly-nodejs-ts-common';
+import { LambdaService, Helpers, ResponseFactory } from 'ly-nodejs-ts-common';
 import { UsuarioRepository } from '../common/repositories/dynamodb/usuario';
 import { SesionService } from '../common/sesion-service';
 import { MfaService } from '../common/mfa-service';
 import { UsuarioService } from '../common/usuario-service';
 import { verifyPassword } from '../common/password';
 import { firmarToken, verificarToken } from '../common/token';
-import { registerAudit } from '../common/audit';
 import { UsuarioDynamo } from '../common/models';
 import {
   MAX_LOGIN_ATTEMPTS,
@@ -18,6 +17,10 @@ import {
   STATUS_ACTIVE,
   AUDIT_EVENTS
 } from '../common/constants';
+
+function businessError(statusCode: number, message: string): never {
+  throw ResponseFactory.error(message, statusCode);
+}
 
 export default class AuthService {
   private usuarioRepo: UsuarioRepository;
@@ -39,8 +42,23 @@ export default class AuthService {
     return {
       requestId: payload?.requestId,
       ip: headers['X-Forwarded-For'] || headers['x-forwarded-for'] || headers['Source-Ip'] || '',
-      userAgent: headers['User-Agent'] || headers['user-agent'] || ''
+      userAgent: headers['User-Agent'] || headers['user-agent'] || '',
+      channel: headers['channel'] || headers['Channel'] || headers['Canal'] || headers['canal'] || ''
     };
+  }
+
+  private registrarEvento(params: any, tenant: string, channel: string = ''): Promise<void> {
+    return Helpers.registerEntityChange({
+      entity: params.entity,
+      entityKey: params.entityId || params.actor || 'SYSTEM',
+      tenant,
+      action: params.action,
+      userId: params.actor,
+      channel: channel || 'SYSTEM',
+      sourceIp: params.sourceIp,
+      userAgent: params.userAgent,
+      changes: params.detail || {}
+    }).catch((err) => console.error('[entity-audit] evento fallo', err));
   }
 
   private mfaActive(usuario: UsuarioDynamo): boolean {
@@ -49,8 +67,12 @@ export default class AuthService {
   }
 
   async login(payload: any): Promise<any> {
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
     const { email, documentType, documentNumber, password, channel } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+
+    if (!channelHeader) {
+      throw businessError(400, 'Header channel es obligatorio');
+    }
 
     const usuario = email
       ? await this.usuarioRepo.getByEmail(email)
@@ -59,18 +81,26 @@ export default class AuthService {
         : null;
 
     if (!usuario) {
-      await registerAudit(
+      await this.registrarEvento(
         { action: AUDIT_EVENTS.LOGIN_FAILED, entity: 'USER', entityId: email || `${documentType}#${documentNumber}`, actor: email, sourceIp: ip, userAgent, detail: { motivo: 'usuario no encontrado' } },
-        process.env.TENANT_DEFAULT || 'GREIP'
+        process.env.TENANT_DEFAULT || 'GREIP', channelHeader
       );
-      throw new Error('Credenciales invalidas');
+      throw businessError(401, 'Credenciales invalidas');
     }
 
     if (usuario.lockedUntil && new Date(usuario.lockedUntil) > new Date()) {
-      throw new Error(`Usuario bloqueado temporalmente. Intentelo mas tarde`);
+      await this.registrarEvento(
+        { action: AUDIT_EVENTS.LOGIN_FAILED, entity: 'USER', entityId: usuario.userId, actor: usuario.userId, sourceIp: ip, userAgent, detail: { motivo: 'usuario bloqueado' } },
+        usuario.tenant, channelHeader
+      );
+      throw businessError(423, `Usuario bloqueado temporalmente. Intentelo mas tarde`);
     }
     if (usuario.status !== STATUS_ACTIVE) {
-      throw new Error('Usuario inactivo');
+      await this.registrarEvento(
+        { action: AUDIT_EVENTS.LOGIN_FAILED, entity: 'USER', entityId: usuario.userId, actor: usuario.userId, sourceIp: ip, userAgent, detail: { motivo: 'usuario inactivo' } },
+        usuario.tenant, channelHeader
+      );
+      throw businessError(403, 'Usuario inactivo');
     }
 
     if (!verifyPassword(password, usuario.password)) {
@@ -81,17 +111,17 @@ export default class AuthService {
         campos.failedAttempts = 0;
       }
       await this.usuarioRepo.actualizar(usuario.userId, campos);
-      await registerAudit(
-        { action: AUDIT_EVENTS.LOGIN_FAILED, entity: 'USER', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent, detail: { intento: intentos } },
-        usuario.tenant
+      await this.registrarEvento(
+        { action: AUDIT_EVENTS.LOGIN_FAILED, entity: 'USER', entityId: usuario.userId, actor: usuario.userId, sourceIp: ip, userAgent, detail: { intento: intentos, email: usuario.email } },
+        usuario.tenant, channelHeader
       );
       if (campos.lockedUntil) {
-        await registerAudit(
-          { action: AUDIT_EVENTS.LOCKED, entity: 'USER', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
-          usuario.tenant
+        await this.registrarEvento(
+          { action: AUDIT_EVENTS.LOCKED, entity: 'USER', entityId: usuario.userId, actor: usuario.userId, sourceIp: ip, userAgent },
+          usuario.tenant, channelHeader
         );
       }
-      throw new Error('Credenciales invalidas');
+      throw businessError(401, 'Credenciales invalidas');
     }
 
     if (usuario.failedAttempts > 0) {
@@ -117,69 +147,81 @@ export default class AuthService {
 
     const permissions = await this.usuarioService.getUserPermissions(usuario.userId);
     const roles = await this.usuarioService.getUserRoles(usuario.userId);
-    const resultado = await this.sesionService.startSession(usuario, { permissions, roles, userAgent, ip });
-    await registerAudit(
-      { action: AUDIT_EVENTS.LOGIN_SUCCESS, entity: 'USER', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
-      usuario.tenant
+    const resultado = await this.sesionService.startSession(usuario, { permissions, roles, userAgent, ip, channel: channelHeader });
+    await this.registrarEvento(
+      { action: AUDIT_EVENTS.LOGIN_SUCCESS, entity: 'USER', entityId: usuario.userId, actor: usuario.userId, sourceIp: ip, userAgent, detail: { canal: channelHeader, email: usuario.email } },
+      usuario.tenant, channelHeader
     );
     return resultado;
   }
 
   async verifyMfa(payload: any): Promise<any> {
     const { mfaToken, challengeId, code } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
 
     let identidad: any;
     try {
       identidad = await verificarToken(mfaToken);
     } catch (error) {
-      throw new Error('Token MFA invalido o expirado');
+      throw businessError(401, 'Token MFA invalido o expirado');
     }
     if (identidad.type !== TOKEN_TYPE_MFA) {
-      throw new Error('Token MFA invalido');
+      throw businessError(401, 'Token MFA invalido');
     }
 
     const usuario = await this.usuarioRepo.getById(identidad.sub);
     if (!usuario) {
-      throw new Error('Usuario no encontrado');
+      throw businessError(404, 'Usuario no encontrado');
     }
 
     const valido = await this.mfaService.verifyCode(usuario.tenant, usuario.userId, challengeId, code);
     if (!valido) {
-      await registerAudit(
-        { action: AUDIT_EVENTS.MFA_FAILED, entity: 'MFA', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
-        usuario.tenant
+      await this.registrarEvento(
+        { action: AUDIT_EVENTS.MFA_FAILED, entity: 'MFA', entityId: usuario.userId, actor: usuario.userId, sourceIp: ip, userAgent },
+        usuario.tenant, channelHeader
       );
-      throw new Error('Codigo de verificacion invalido');
+      throw businessError(400, 'Codigo de verificacion invalido');
     }
 
     const permissions = await this.usuarioService.getUserPermissions(usuario.userId);
     const roles = await this.usuarioService.getUserRoles(usuario.userId);
-    const resultado = await this.sesionService.startSession(usuario, { permissions, roles, userAgent, ip });
-    await registerAudit(
-      { action: AUDIT_EVENTS.MFA_VERIFIED, entity: 'MFA', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
-      usuario.tenant
+    const resultado = await this.sesionService.startSession(usuario, { permissions, roles, userAgent, ip, channel: channelHeader });
+    await this.registrarEvento(
+      { action: AUDIT_EVENTS.MFA_VERIFIED, entity: 'MFA', entityId: usuario.userId, actor: usuario.userId, sourceIp: ip, userAgent, detail: { canal: channelHeader, email: usuario.email } },
+      usuario.tenant, channelHeader
     );
     return resultado;
   }
 
   async refreshToken(payload: any): Promise<any> {
     const { refreshToken } = payload;
-    const { ip, userAgent } = this.ctx(payload);
-    return await this.sesionService.refreshSession(refreshToken, userAgent, ip);
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
+    const resultado = await this.sesionService.refreshSession(refreshToken, userAgent, ip, channelHeader);
+    try {
+      const identidad = await verificarToken(refreshToken);
+      if (identidad && identidad.sub && identidad.tenant) {
+        await this.registrarEvento(
+          { action: AUDIT_EVENTS.REFRESH, entity: 'SESSION', entityId: identidad.sub, actor: identidad.sub, sourceIp: ip, userAgent, detail: { canal: channelHeader } },
+          identidad.tenant, channelHeader
+        );
+      }
+    } catch (error) {
+      console.error('[entity-audit] refresh event fallo', error);
+    }
+    return resultado;
   }
 
   async logout(payload: any, identity: any): Promise<any> {
     const { refreshToken, logoutAll } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
     if (!refreshToken) {
-      throw new Error('refreshToken es obligatorio');
+      throw businessError(400, 'refreshToken es obligatorio');
     }
     await this.sesionService.closeSession(refreshToken, Boolean(logoutAll));
     if (identity) {
-      await registerAudit(
+      await this.registrarEvento(
         { action: AUDIT_EVENTS.LOGOUT, entity: 'SESSION', entityId: identity.sub, actor: identity.sub, sourceIp: ip, userAgent },
-        identity.tenant
+        identity.tenant, channelHeader
       );
     }
     return { logout: true };
@@ -187,21 +229,21 @@ export default class AuthService {
 
   async changePassword(payload: any, identity: any): Promise<any> {
     const { currentPassword, newPassword } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
     if (!identity) {
-      throw new Error('No autenticado');
+      throw businessError(401, 'No autenticado');
     }
     await this.usuarioService.changePassword(identity.sub, currentPassword, newPassword);
-    await registerAudit(
+    await this.registrarEvento(
       { action: AUDIT_EVENTS.PASSWORD_CHANGED, entity: 'USER', entityId: identity.sub, actor: identity.sub, sourceIp: ip, userAgent },
-      identity.tenant
+      identity.tenant, channelHeader
     );
     return { passwordUpdated: true };
   }
 
-  async requestRecovery(payload: any): Promise<any> {
+async requestRecovery(payload: any): Promise<any> {
     const { email } = payload;
-    const { requestId } = this.ctx(payload);
+    const { requestId, ip, userAgent, channel: channelHeader } = this.ctx(payload);
     const usuario = email ? await this.usuarioRepo.getByEmail(email) : null;
 
     if (usuario && usuario.status === STATUS_ACTIVE) {
@@ -210,9 +252,9 @@ export default class AuthService {
         RESET_TOKEN_TTL_MIN
       );
       await this.sendRecoveryEmail(usuario, resetToken, requestId);
-      await registerAudit(
-        { action: AUDIT_EVENTS.RECOVERY_REQUESTED, entity: 'USER', entityId: usuario.userId, actor: usuario.email },
-        usuario.tenant
+      await this.registrarEvento(
+        { action: AUDIT_EVENTS.RECOVERY_REQUESTED, entity: 'USER', entityId: usuario.userId, actor: usuario.userId, sourceIp: ip, userAgent, detail: { email: usuario.email } },
+        usuario.tenant, channelHeader
       );
     }
 
@@ -242,27 +284,27 @@ export default class AuthService {
 
   async resetPassword(payload: any): Promise<any> {
     const { resetToken, newPassword } = payload;
-    const { ip, userAgent } = this.ctx(payload);
+    const { ip, userAgent, channel: channelHeader } = this.ctx(payload);
 
     let identidad: any;
     try {
       identidad = await verificarToken(resetToken);
     } catch (error) {
-      throw new Error('Token de recuperacion invalido o expirado');
+      throw businessError(401, 'Token de recuperacion invalido o expirado');
     }
     if (identidad.type !== TOKEN_TYPE_RESET) {
-      throw new Error('Token de recuperacion invalido');
+      throw businessError(401, 'Token de recuperacion invalido');
     }
 
     const usuario = await this.usuarioRepo.getById(identidad.sub);
     if (!usuario) {
-      throw new Error('Usuario no encontrado');
+      throw businessError(404, 'Usuario no encontrado');
     }
 
     await this.usuarioService.resetPassword(usuario.userId, newPassword);
-    await registerAudit(
-      { action: AUDIT_EVENTS.PASSWORD_RESET, entity: 'USER', entityId: usuario.userId, actor: usuario.email, sourceIp: ip, userAgent },
-      usuario.tenant
+    await this.registrarEvento(
+      { action: AUDIT_EVENTS.PASSWORD_RESET, entity: 'USER', entityId: usuario.userId, actor: usuario.userId, sourceIp: ip, userAgent, detail: { email: usuario.email } },
+      usuario.tenant, channelHeader
     );
     return { passwordUpdated: true };
   }
