@@ -1,0 +1,20 @@
+headers:
+  Location: "'${self:custom.config.appUrl.${self:custom.stageDeploy}}/login'"
+  X-Content-Type-Options: "'nosniff'"
+  Strict-Transport-Security: "'max-age=31536000; includeSubDomains'"
+template: ${file(config/serverless/response/verificarEmailRedirect.vm)}
+statusCodes:
+  200:
+    template: ${file(config/serverless/response/verificarEmailRedirect.vm)}
+  302:
+    template: ${file(config/serverless/response/verificarEmailRedirect.vm)}
+  400:
+    template: ${file(config/serverless/response/verificarEmailRedirect.vm)}
+  401:
+    template: ${file(config/serverless/response/verificarEmailRedirect.vm)}
+  404:
+    template: ${file(config/serverless/response/verificarEmailRedirect.vm)}
+  410:
+    template: ${file(config/serverless/response/verificarEmailRedirect.vm)}
+  500:
+    template: ${file(config/serverless/response/verificarEmailRedirect.vm)}

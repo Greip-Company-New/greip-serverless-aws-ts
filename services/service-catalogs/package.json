@@ -1,0 +1,42 @@
+{
+  "name": "service-catalogs",
+  "version": "1.0.0",
+  "description": "Microservicio de catalogos de GREIP COMPANY - Catalogo de productos (PostgreSQL)",
+  "main": "dist/product-lmb/app.js",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "start": "serverless offline start --stage DEV --noTimeout --noAuth --verbose",
+    "build": "npx tsc && rsync -am --include='*/' --include='*.ts' --exclude='*' src/ dist/",
+    "prebuild": "rm -rf dist",
+    "predeploy": "npm run build",
+    "deploy": "npm run build && npx serverless deploy --stage DEV",
+    "deploy:stage": "npm run build && npx serverless deploy --stage",
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [],
+  "author": "GREIP COMPANY",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.159",
+    "@types/jest": "^30.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.10.1",
+    "@types/pg": "^8.11.10",
+    "esbuild": "^0.27.2",
+    "jest": "^30.2.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.3",
+    "ly-nodejs-ts-common": "file:../../layers/ly-nodejs-ts-common",
+    "ly-nodejs-ts-postgresdb": "file:../../layers/ly-nodejs-ts-postgresdb",
+    "pg": "^8.13.1",
+    "serverless": "^4.25.0",
+    "serverless-domain-manager": "^8.0.0",
+    "serverless-offline": "^14.4.0",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

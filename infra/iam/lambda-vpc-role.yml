@@ -1,0 +1,135 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'IAM Role de ejecucion para las Lambdas de GREIP COMPANY (lambda-vpc-role)'
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - DEV
+      - QA
+      - PROD
+    Default: DEV
+
+Resources:
+  LambdaVpcRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: lambda-vpc-role
+      Description: Rol de ejecucion para Lambdas en VPC de GREIP COMPANY
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        # Permite gestionar ENIs en el VPC + escribir logs de CloudWatch
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        # Permite enviar trazas a X-Ray (tracing de Lambda y API Gateway)
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+        - PolicyName: GreipLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # DynamoDB: tablas GREIP (usuarios, archivos, logs)
+              - Sid: GreipDynamoDb
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:DescribeTable
+                  - dynamodb:ListStreams
+                  - dynamodb:DescribeStream
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/TBL_GREIP_*'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/TBL_GREIP_*/stream/*'
+              # SNS: envio de SMS (otp) via service-cross
+              - Sid: GreipSns
+                Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: '*'
+              # SES: envio de correos (otp/plantillas) via service-cross
+              - Sid: GreipSes
+                Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                  - ses:GetIdentityVerificationAttributes
+                  - ses:ListIdentities
+                Resource: '*'
+              # S3: buckets de aplicacion GREIP
+              - Sid: GreipS3
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetObjectAcl
+                  - s3:PutObjectAcl
+                Resource:
+                  - !Sub 'arn:aws:s3:::bk-greip-*'
+                  - !Sub 'arn:aws:s3:::bk-greip-*/*'
+              # SSM Parameter Store: parametros de configuracion GREIP
+              - Sid: GreipSsmRead
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/Greip/*'
+              # Secrets Manager: secretos GREIP (lectura y escritura de
+              # credenciales de terceros: Greip/ThirdParty/<tenant>)
+              - Sid: GreipSecretsManager
+                Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:UpdateSecret
+                  - secretsmanager:PutSecretValue
+                Resource:
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:Greip/*'
+              # Invocacion de Lambdas (validacion de identidad/seguridad)
+              - Sid: GreipInvokeLambda
+                Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: '*'
+              # SQS: cola de auditoria (send desde las lambdas productoras,
+              # receive/delete desde AUDIT_SYNC_LMB) + DLQ
+              - Sid: GreipSqsAuditoria
+                Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:GetQueueUrl
+                  - sqs:ChangeMessageVisibility
+                Resource:
+                  - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:greip-audit-*'
+              # CloudWatch: metricas de funciones Lambda
+              - Sid: GreipCloudWatch
+                Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+
+Outputs:
+  LambdaVpcRoleArn:
+    Value: !GetAtt LambdaVpcRole.Arn
+    Export:
+      Name: !Sub 'greip-lambda-vpc-role-arn-${Environment}'

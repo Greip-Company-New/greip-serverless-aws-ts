@@ -1,0 +1,52 @@
+#set($inputError = $input.path('$.errorMessage'))
+#if( "$!inputError" == "" )
+  #set($inputRoot = $input.path('$'))
+  $inputRoot
+#else
+  ## Try to parse the error as JSON to extract httpStatus
+  #set($errorJson = $util.parseJson($inputError))
+  #set($httpStatus = $errorJson.httpStatus)
+
+  ## If httpStatus is found, use it directly
+  #if($httpStatus && $httpStatus != "")
+    #set($context.responseOverride.status = $httpStatus)
+    {"payload":$inputError}
+  ## Otherwise, fall back to pattern matching for backward compatibility
+  #elseif($inputError.matches('.*:400,.*'))
+    #set($context.responseOverride.status = 400)
+    {"payload":$inputError}
+  #elseif($inputError.matches('.*:401,.*'))
+    #set($context.responseOverride.status = 401)
+    {"payload":$inputError}
+  #elseif($inputError.matches('.*:402,.*'))
+    #set($context.responseOverride.status = 402)
+    {"payload":$inputError}
+  #elseif($inputError.matches('.*:403,.*'))
+    #set($context.responseOverride.status = 403)
+    {"payload":$inputError}
+  #elseif($inputError.matches('.*:404,.*'))
+    #set($context.responseOverride.status = 404)
+    {"payload":$inputError}
+  #elseif($inputError.matches('.*:413,.*'))
+    #set($context.responseOverride.status = 413)
+    {"payload":$inputError}
+  #elseif($inputError.matches('.*:422,.*'))
+    #set($context.responseOverride.status = 422)
+    {"payload":$inputError}
+  #elseif($inputError.matches('.*:501,.*'))
+    #set($context.responseOverride.status = 501)
+    {"payload":$inputError}
+  #elseif($inputError.matches('.*:502,.*'))
+    #set($context.responseOverride.status = 502)
+    {"payload":$inputError}
+  #elseif($inputError.matches('.*:503,.*'))
+    #set($context.responseOverride.status = 503)
+    {"payload":$inputError}
+  #elseif($inputError.matches('.*:520,.*'))
+    #set($context.responseOverride.status = 520)
+    {"payload":$inputError}
+  #else
+    #set($context.responseOverride.status = 500)
+    {"payload":$inputError}
+  #end
+#end

@@ -1,0 +1,9 @@
+services:
+  service-catalogs:
+    path: services/service-catalogs
+  service-security:
+    path: services/service-security
+  service-cross:
+    path: services/service-cross
+  service-third-party:
+    path: services/service-third-party

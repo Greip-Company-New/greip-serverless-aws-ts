@@ -1,0 +1,86 @@
+service: service-catalogs
+frameworkVersion: '4'
+
+build: false
+
+plugins:
+  - serverless-domain-manager
+  - serverless-offline
+
+package:
+  individually: true
+  patterns:
+    - '!**'
+    - 'dist/util/**/*.js'
+    - 'dist/util/**/*.ts'
+    - '!dist/**/*.js.map'
+
+custom:
+  name: SRV-CATALOGS
+  path: srv-catalogs
+  defaultStage: ${opt:stage, 'DEV'}
+  stageDeploy: ${opt:stage, 'DEV'}
+  config: ${file(serverless-config.yml)}
+  customDomain:
+    domainName: ${self:custom.config.domains.${self:custom.stageDeploy}}
+    basePath: ${self:custom.path}
+    stage: ${self:custom.stageDeploy}
+    createRoute53Record: false
+    certificateArn: arn:aws:acm:us-east-2:918897411288:certificate/606bea7a-80f8-413e-8242-0d8664c357f9
+    endpointType: 'regional'
+    securityPolicy: tls_1_2
+    apiType: rest
+    autoDomain: false
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  stage: ${self:custom.stageDeploy}
+  region: ${self:custom.config.regions.code.${self:custom.stageDeploy}}
+  profile: ${self:custom.config.profile.${self:custom.stageDeploy}}
+  timeout: 28
+  memorySize: 512
+  logRetentionInDays: 30
+  apiGateway:
+    apiKeys:
+      - APIKEY-${self:custom.stageDeploy}-${self:custom.name}
+    usagePlan:
+      quota:
+        limit: 1000000
+        offset: 2
+        period: MONTH
+      throttle:
+        burstLimit: 100
+        rateLimit: 50
+  vpc:
+    securityGroupIds:
+      - ${self:custom.config.vpcSecurityGroupId.${self:custom.stageDeploy}}
+    subnetIds:
+      - ${self:custom.config.vpcSubnetId1.${self:custom.stageDeploy}}
+      - ${self:custom.config.vpcSubnetId2.${self:custom.stageDeploy}}
+  tracing:
+    apiGateway: true
+    lambda: true
+  tags:
+    OWNER: GREIP-COMPANY
+    RESPONSIBLE: RCHANG
+    NAME: ${self:custom.name}
+    STAGE: ${self:provider.stage}
+    SERVICE: ${self:service}
+  role: arn:aws:iam::${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:role/lambda-vpc-role
+
+  environment:
+    REGION: ${self:provider.region}
+    STAGE: ${self:provider.stage}
+    SDK_AWS_REGION: ${self:provider.region}
+    BUCKET: ${self:custom.config.bucketDeploy.${self:custom.stageDeploy}}
+    LAMBDA_PREFIX: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}
+    PG_SECRET_DB: ${self:custom.config.secretDataBase.${self:custom.stageDeploy}}
+    SM_JWT_PUBLIC_KEY: 'Greip/JWT-Public'
+    SM_ENCRIPTACION_TOKEN: 'Greip/Encriptacion/Token'
+    LMB_ENTITY_AUDIT: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
+    SQS_AUDIT_QUEUE_URL: 'https://sqs.us-east-2.amazonaws.com/918897411288/greip-audit-dev'
+    PROFILE_DEPLOYMENT: ${self:provider.profile}
+    AWS_ACCOUNT: ${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}
+
+functions: ${file(functions.yml)}

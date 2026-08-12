@@ -1,0 +1,37 @@
+{
+  "name": "service-third-party",
+  "version": "1.0.0",
+  "description": "Servicio de terceros de GREIP COMPANY - Notificaciones por proveedores externos (Brevo email/sms + Twilio sms y SendGrid email) con configuracion por tenant",
+  "main": "dist/config-lmb/app.js",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "start": "serverless offline start --stage DEV --noTimeout --noAuth --verbose",
+    "build": "npx tsc && rsync -am --include='*/' --include='*.ts' --exclude='*' src/ dist/",
+    "prebuild": "rm -rf dist",
+    "predeploy": "npm run build",
+    "deploy": "npm run build && npx serverless deploy --stage DEV",
+    "deploy:stage": "npm run build && npx serverless deploy --stage",
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [],
+  "author": "GREIP COMPANY",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.159",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.1",
+    "esbuild": "^0.27.2",
+    "jest": "^30.2.0",
+    "joi": "^17.13.3",
+    "ly-nodejs-ts-common": "file:../../layers/ly-nodejs-ts-common",
+    "serverless": "^4.25.0",
+    "serverless-domain-manager": "^8.0.0",
+    "serverless-offline": "^14.4.0",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

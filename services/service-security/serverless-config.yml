@@ -1,0 +1,96 @@
+# Configuracion por stage de service-security (GREIP COMPANY)
+# QA/PROD: completar los valores PENDIENTE al desplegar esos entornos.
+
+regions:
+    code:
+      DEV: us-east-2
+      QA: us-east-2
+      PROD: us-east-2
+loginUrl:
+    DEV: 'https://appdev.greip.com.pe/login'
+    QA: 'https://appqa.greip.com.pe/login'
+    PROD: 'https://app.greip.com.pe/login'
+appUrl:
+    DEV: 'https://appdev.greip.com.pe'
+    QA: 'https://appqa.greip.com.pe'
+    PROD: 'https://app.greip.com.pe'
+domains:
+    DEV: 'apidev.greip.com.pe'
+    QA: 'apiqa.greip.com.pe'
+    PROD: 'api.greip.com.pe'
+idAwsAccount:
+    DEV: '918897411288'
+    QA: '918897411288'
+    PROD: '918897411288'
+vpcSecurityGroupId:
+    DEV: sg-0f147bc5e449a259d
+    QA: PENDIENTE
+    PROD: PENDIENTE
+vpcSubnetId1:
+    DEV: subnet-0d818db94727340a0
+    QA: PENDIENTE
+    PROD: PENDIENTE
+vpcSubnetId2:
+    DEV: subnet-0d818db94727340a0
+    QA: PENDIENTE
+    PROD: PENDIENTE
+bucketDeploy:
+    DEV: bk-greip-dev
+    QA: bk-greip-qa
+    PROD: bk-greip-prod
+secretDataBase:
+    DEV: 'Greip/postgres/dev'
+    QA: 'Greip/postgres/qa'
+    PROD: 'Greip/postgres/prod'
+lambdaPrefix:
+    DEV: SRV-SECURITY-LMB
+    QA: SRV-SECURITY-LMB
+    PROD: SRV-SECURITY-LMB
+profile:
+    DEV: 'devGreipCompany'
+    QA: 'qaGreipCompany'
+    PROD: 'prodGreipCompany'
+lyCommonNew:
+    DEV: 8
+    QA: 8
+    PROD: 8
+lyPgNew:
+    DEV: 1
+    QA: 1
+    PROD: 1
+# Tablas DynamoDB (mismas en los tres entornos; el sufijo cambia por stage)
+tablaUsuarios:
+    DEV: 'TBL_GREIP_USUARIOS_DEV'
+    QA: 'TBL_GREIP_USUARIOS_QA'
+    PROD: 'TBL_GREIP_USUARIOS_PROD'
+tablaSesiones:
+    DEV: 'TBL_GREIP_SEGURIDAD_SESIONES_DEV'
+    QA: 'TBL_GREIP_SEGURIDAD_SESIONES_QA'
+    PROD: 'TBL_GREIP_SEGURIDAD_SESIONES_PROD'
+tablaMfa:
+    DEV: 'TBL_GREIP_SEGURIDAD_MFA_DEV'
+    QA: 'TBL_GREIP_SEGURIDAD_MFA_QA'
+    PROD: 'TBL_GREIP_SEGURIDAD_MFA_PROD'
+# Lambdas genericas de service-cross (envio de SMS/email) invocadas via LambdaService.
+lmbCrossSms:
+    DEV: 'SRV-CROSS-LMB-SMS'
+    QA: 'SRV-CROSS-LMB-SMS'
+    PROD: 'SRV-CROSS-LMB-SMS'
+lmbCrossEmail:
+    DEV: 'SRV-CROSS-LMB-EMAIL'
+    QA: 'SRV-CROSS-LMB-EMAIL'
+    PROD: 'SRV-CROSS-LMB-EMAIL'
+# Microservicio de auditoria de entidades (Lambda-to-Lambda) del mismo servicio.
+lmbEntityAudit:
+    DEV: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
+    QA: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
+    PROD: 'SRV-SECURITY-LMB-ENTITY-AUDIT'
+# Cola SQS de auditoria (creada en infra/storage/storage.yml).
+sqsAuditUrl:
+    DEV: 'https://sqs.us-east-2.amazonaws.com/918897411288/greip-audit-dev'
+    QA: 'https://sqs.us-east-2.amazonaws.com/918897411288/greip-audit-qa'
+    PROD: 'https://sqs.us-east-2.amazonaws.com/918897411288/greip-audit-prod'
+sqsAuditArn:
+    DEV: 'arn:aws:sqs:us-east-2:918897411288:greip-audit-dev'
+    QA: 'arn:aws:sqs:us-east-2:918897411288:greip-audit-qa'
+    PROD: 'arn:aws:sqs:us-east-2:918897411288:greip-audit-prod'

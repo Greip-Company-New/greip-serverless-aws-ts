@@ -1,0 +1,186 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Frontend de GREIP COMPANY: S3 + CloudFront (OAC) + dominio custom'
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - DEV
+      - QA
+      - PROD
+    Default: DEV
+  BucketSuffix:
+    Type: String
+    Description: Sufijo en minusculas para el bucket (dev|qa|prod).
+    AllowedValues:
+      - dev
+      - qa
+      - prod
+    Default: dev
+  DomainName:
+    Type: String
+    Description: Dominio custom del CloudFront (ej. appdev.greip.com.pe).
+    Default: appdev.greip.com.pe
+  CertificateArn:
+    Type: String
+    Description: ARN del certificado ACM en us-east-1 (CloudFront requiere us-east-1).
+    Default: ''
+  PriceClass:
+    Type: String
+    Description: Clase de precio de CloudFront (100=US+Can+Europe, 200=+Asia+Africa, All=global).
+    AllowedValues:
+      - PriceClass_100
+      - PriceClass_200
+      - PriceClass_All
+    Default: PriceClass_100
+
+Conditions:
+  HasCertificate: !Not [!Equals [!Ref CertificateArn, '']]
+  IsDev: !Equals [!Ref Environment, 'DEV']
+
+Resources:
+  # ============================================================
+  # S3 Bucket para los archivos estaticos del frontend
+  # ============================================================
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'web-greip-${BucketSuffix}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Name
+          Value: !Sub 'greip-frontend-${Environment}'
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  # ============================================================
+  # CloudFront Origin Access Control (acceso privado al bucket)
+  # ============================================================
+  CloudFrontOac:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub 'greip-frontend-oac-${Environment}'
+        Description: !Sub 'OAC para el bucket web-greip-${BucketSuffix}'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # ============================================================
+  # Bucket Policy: CloudFront OAC tiene permiso de lectura
+  # ============================================================
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontOAC
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${FrontendBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}'
+
+  # ============================================================
+  # CloudFront Distribution
+  # ============================================================
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        PriceClass: !Ref PriceClass
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        Aliases:
+          !If
+            - HasCertificate
+            - - !Ref DomainName
+            - !Ref AWS::NoValue
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt CloudFrontOac.Id
+            S3OriginConfig: {}
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          Compress: true
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          MinTTL: 0
+          DefaultTTL: 300
+          MaxTTL: 31536000
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+        ViewerCertificate:
+          !If
+            - HasCertificate
+            - AcmCertificateArn: !Ref CertificateArn
+              SslSupportMethod: sni-only
+              MinimumProtocolVersion: TLSv1.2_2021
+            - CloudFrontDefaultCertificate: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'greip-frontend-${Environment}'
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+Outputs:
+  BucketName:
+    Value: !Ref FrontendBucket
+    Description: Nombre del bucket S3 del frontend.
+    Export:
+      Name: !Sub 'greip-frontend-bucket-${Environment}'
+
+  CloudFrontDomain:
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Description: Dominio de CloudFront (para el registro CNAME en Cloudflare).
+    Export:
+      Name: !Sub 'greip-frontend-cf-domain-${Environment}'
+
+  CloudFrontDistributionId:
+    Value: !Ref CloudFrontDistribution
+    Description: ID de la distribucion CloudFront (para invalidaciones).
+    Export:
+      Name: !Sub 'greip-frontend-id-${Environment}'
+
+  WebsiteUrl:
+    Value: !Sub 'https://${DomainName}'
+    Description: URL publica del sitio (cuando el DNS y el certificado esten configurados).
+    Condition: HasCertificate
+    Export:
+      Name: !Sub 'greip-frontend-url-${Environment}'

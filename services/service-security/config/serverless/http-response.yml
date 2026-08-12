@@ -1,0 +1,36 @@
+headers:
+  Access-Control-Allow-Origin: "'*'"
+  Access-Control-Allow-Credentials: "'true'"
+  Access-Control-Allow-Methods: "'OPTIONS,GET,POST,DELETE,PUT'"
+  Access-Control-Allow-Headers : "'*'"
+  X-Content-Type-Options: "'nosniff'"
+  Cache-Control: "'no-store, no-cache, must-revalidate, private'"
+  Pragma: "'no-cache'"
+  Expires: "'0'"
+  X-XSS-Protection: "'0'"
+  X-Frame-Options: "'SAMEORIGIN'"
+  Cross-Origin-Resource-Policy: "'same-origin'"
+  Referrer-Policy: "'no-referrer-when-downgrade'"
+  Strict-Transport-Security: "'max-age=31536000; includeSubDomains'"
+  X-Download-Options: "'noopen'"
+  X-Permitted-Cross-Domain-Policies: "'none'"
+template: ${file(./config/serverless/response.vm)}
+statusCodes:
+  400:
+    pattern: '.*400.*'
+    template: "{\"payload\":$input.path('$.errorMessage')}"
+  401:
+    pattern: '.*401.*'
+    template: "{\"payload\":$input.path('$.errorMessage')}"
+  403:
+    pattern: '.*403.*'
+    template: "{\"payload\":$input.path('$.errorMessage')}"
+  404:
+    pattern: '.*404.*'
+    template: "{\"payload\":$input.path('$.errorMessage')}"
+  422:
+    pattern: '.*422.*'
+    template: "{\"payload\":$input.path('$.errorMessage')}"
+  500:
+    pattern: '.*500.*'
+    template: "{\"payload\":$input.path('$.errorMessage')}"

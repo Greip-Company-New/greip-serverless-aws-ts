@@ -1,0 +1,439 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  VPC de GREIP COMPANY para microservicios serverless (Lambdas en subred privada
+  con endpoints de VPC; EC2 Postgres en subred publica con SG restringido).
+  Sin NAT Gateway (ahorro de costo).
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - DEV
+      - QA
+      - PROD
+    Default: DEV
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+  PublicSubnetCidr:
+    Type: String
+    Default: 10.0.0.0/24
+  PrivateSubnetCidr:
+    Type: String
+    Default: 10.0.1.0/24
+  AvailabilityZone:
+    Type: String
+    Default: us-east-2a
+  OfficeIp:
+    Type: String
+    Default: ''
+    Description: >-
+      CIDR de la IP publica de la oficina para acceso administrativo al EC2
+      Postgres (SSH 22 y 5432). Dejar vacio para no abrir puertos.
+  OpenToInternet:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: >-
+      Abre el EC2 Postgres a INTERNET (SSH 22 y PostgreSQL 5432 desde 0.0.0.0/0).
+      Solo para DEV; en PROD usar el SG restringido + NAT.
+
+Conditions:
+  HasOfficeIp: !Not [!Equals [!Ref OfficeIp, '']]
+  HasOpenInternet: !Equals [!Ref OpenToInternet, 'true']
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-VPC-${Environment}'
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-IGW-${Environment}'
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  # ---------- Subredes ----------
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PublicSubnetCidr
+      AvailabilityZone: !Ref AvailabilityZone
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-PUBLIC-${Environment}'
+        - Key: TYPE
+          Value: public
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PrivateSubnetCidr
+      AvailabilityZone: !Ref AvailabilityZone
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-PRIVATE-${Environment}'
+        - Key: TYPE
+          Value: private
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-RT-PUBLIC-${Environment}'
+
+  PublicRouteInternet:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-RT-PRIVATE-${Environment}'
+
+  PrivateSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref PrivateRouteTable
+
+  # ---------- Endpoints de VPC (sin NAT) ----------
+
+  # Gateway endpoint (gratis): DynamoDB y S3 para las Lambdas de la subred privada.
+  # El tráfico a endpoints de gateway SÍ se evalúa contra el SG de la Lambda:
+  # por eso se agrega una regla de egress 443 al prefix list de DynamoDB.
+  DynamoDbGatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: com.amazonaws.us-east-2.dynamodb
+      RouteTableIds:
+        - !Ref PrivateRouteTable
+
+  S3GatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: com.amazonaws.us-east-2.s3
+      RouteTableIds:
+        - !Ref PrivateRouteTable
+        - !Ref PublicRouteTable
+
+  # Interface endpoint (costo ~US$7/mes): CloudWatch Logs para las Lambdas.
+  LogsEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG del endpoint de interfaz de CloudWatch Logs
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-SG-ENDPOINT-LOGS-${Environment}'
+
+  LogsEndpointIngressFromLambda:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LogsEndpointSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  LogsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: com.amazonaws.us-east-2.logs
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !Ref LogsEndpointSecurityGroup
+      PrivateDnsEnabled: true
+
+  # Interface endpoint (costo ~US$7/mes): Secrets Manager para credenciales de BD
+  # de las Lambdas (sin NAT). Requerido por PostgresDatabaseService/OracleDatabaseService.
+  SecretsManagerEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG del endpoint de interfaz de Secrets Manager
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-SG-ENDPOINT-SECRETS-${Environment}'
+
+  SecretsManagerEndpointIngressFromLambda:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SecretsManagerEndpointSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  SecretsManagerEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.secretsmanager'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !Ref SecretsManagerEndpointSecurityGroup
+      PrivateDnsEnabled: true
+
+  # Interface endpoint (costo ~US$7/mes): SQS para la cola de auditoria.
+  # Sin NAT, las Lambdas en subred privada necesitan el endpoint para encolar
+  # los eventos de auditoria (Helpers.registerEntityChange -> greip-audit-<env>).
+  SqsEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG del endpoint de interfaz de SQS
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-SG-ENDPOINT-SQS-${Environment}'
+
+  SqsEndpointIngressFromLambda:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SqsEndpointSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  SqsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.sqs'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !Ref SqsEndpointSecurityGroup
+      PrivateDnsEnabled: true
+
+  # Interface endpoint (costo ~US$7/mes): Lambda API para que service-security
+  # invoque las Lambdas genericas de service-cross (SMS/email via SES/SNS).
+  # Sin NAT, las Lambdas en subred privada no pueden alcanzar la API de Lambda.
+  LambdaEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG del endpoint de interfaz de la API de Lambda
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-SG-ENDPOINT-LAMBDA-${Environment}'
+
+  LambdaEndpointIngressFromLambda:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LambdaEndpointSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  LambdaEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.lambda'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !Ref LambdaEndpointSecurityGroup
+      PrivateDnsEnabled: true
+
+  # ---------- Security Groups ----------
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG de las funciones Lambda de GREIP COMPANY
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-SG-LAMBDA-${Environment}'
+
+  PostgresSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG del EC2 Postgres de GREIP COMPANY
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'GREIP-SG-POSTGRES-${Environment}'
+
+  # Reglas separadas para evitar dependencias circulares entre SGs.
+  PostgresIngressFromLambda:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PostgresSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  LambdaEgressToPostgres:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      DestinationSecurityGroupId: !Ref PostgresSecurityGroup
+
+  LambdaEgressToLogsEndpoint:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref LogsEndpointSecurityGroup
+
+  LambdaEgressToSecretsManagerEndpoint:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref SecretsManagerEndpointSecurityGroup
+
+  LambdaEgressToLambdaEndpoint:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref LambdaEndpointSecurityGroup
+
+  LambdaEgressToSqsEndpoint:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref SqsEndpointSecurityGroup
+
+  # Egress 443 al prefix list de DynamoDB (gateway endpoint). Sin esta regla,
+  # el trafico de las Lambdas a DynamoDB se descarta y las llamadas se cuelgan.
+  # pl-4ca54025 = com.amazonaws.us-east-2.dynamodb (us-east-2).
+  LambdaEgressToDynamoDb:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationPrefixListId: pl-4ca54025
+
+  # Acceso administrativo opcional desde la oficina (SSH + 5432).
+  PostgresIngressOfficeSsh:
+    Condition: HasOfficeIp
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PostgresSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !Ref OfficeIp
+
+  PostgresIngressOfficePg:
+    Condition: HasOfficeIp
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PostgresSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      CidrIp: !Ref OfficeIp
+
+  # Acceso abierto a internet (solo DEV): SSH + PostgreSQL desde cualquier IP.
+  PostgresIngressAnyIpSsh:
+    Condition: HasOpenInternet
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PostgresSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: 0.0.0.0/0
+
+  PostgresIngressAnyIpPg:
+    Condition: HasOpenInternet
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PostgresSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      CidrIp: 0.0.0.0/0
+
+Outputs:
+  VpcId:
+    Value: !Ref Vpc
+    Export:
+      Name: !Sub 'greip-vpc-id-${Environment}'
+  PublicSubnetId:
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub 'greip-public-subnet-${Environment}'
+  PrivateSubnetId:
+    Value: !Ref PrivateSubnet
+    Export:
+      Name: !Sub 'greip-private-subnet-${Environment}'
+  LambdaSecurityGroupId:
+    Value: !Ref LambdaSecurityGroup
+    Export:
+      Name: !Sub 'greip-lambda-sg-${Environment}'
+  PostgresSecurityGroupId:
+    Value: !Ref PostgresSecurityGroup
+    Export:
+      Name: !Sub 'greip-postgres-sg-${Environment}'

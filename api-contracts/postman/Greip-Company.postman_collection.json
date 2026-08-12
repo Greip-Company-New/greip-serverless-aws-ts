@@ -1,0 +1,1928 @@
+{
+  "info": {
+    "name": "GREIP COMPANY - API",
+    "_postman_id": "a3f5e8c1-9b2d-4f6a-8c3e-1d2b4a5c6d7e",
+    "description": "Colección Postman de las APIs de GREIP COMPANY (DEV).\n\nServicios:\n- service-security (base path /srv-security): autenticación (auth), usuarios + RBAC (user/role/permission) y auditoría (audit).\n- service-catalogs (base path /srv-catalogs): catálogo de productos (product).\n- service-cross (base path /srv-cross): notificaciones (email/SMS) y cifrado de data de tokens.\n\nAutenticación:\n- Todos los endpoints requieren header `x-api-key` (variable por servicio).\n- Los endpoints protegidos requieren `Authorization: Bearer <token>` (variable token) y permisos RBAC.\n- **Multicanal**: todos los requests llevan el header `channel` (variable `canal`). El access token se genera con el header `channel` del login y solo es válido para ese canal. Valores: AppWeb, AppMovil, Chatbot, Whatsapp.\n\nEl request 'Login' guarda automáticamente el access token en `token`; 'Create user' guarda `userId`; 'Create role' guarda `roleId`; 'Create product' guarda `productId`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "api-server",
+      "value": "https://apidev.greip.com.pe"
+    },
+    {
+      "key": "canal",
+      "value": "AppWeb"
+    },
+    {
+      "key": "ak-service-security",
+      "value": "KojEKtWCO14fT6nOLjrKy2onSai5PrVU798hDqLk"
+    },
+    {
+      "key": "ak-service-catalogs",
+      "value": "ucIwLqtFvZ5Wcw0NAiKUF4MEbvVMr8HU8Gl3vNKc"
+    },
+    {
+      "key": "ak-service-cross",
+      "value": "JU4a3Tfgxd1Gjrb7YQzkl4AUWCBo8PIYMawL0t26"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "roleId",
+      "value": ""
+    },
+    {
+      "key": "sk",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "ak-service-third-party",
+      "value": "",
+      "type": "default",
+      "disabled": true
+    }
+  ],
+  "item": [
+    {
+      "name": "service-security / Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/login",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@greip.com.pe\",\n  \"password\": \"Greip#2026\"\n}"
+            },
+            "description": "Inicia sesión por email (o documentType + documentNumber). El canal se toma del header `Canal`. Guarda el accessToken en la variable `token`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json().payload;",
+                  "if (body && body.data && body.data.accessToken) {",
+                  "  pm.collectionVariables.set('token', body.data.accessToken);",
+                  "  console.log('Token guardado');",
+                  "} else {",
+                  "  console.log('Login sin accessToken (posible desafío MFA):', JSON.stringify(body));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify MFA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/mfa/verify",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "mfa",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mfaToken\": \"eyJ...\",\n  \"challengeId\": \"uuid\",\n  \"code\": \"123456\"\n}"
+            },
+            "description": "Verifica el código MFA y completa el login. Guarda el accessToken en `token`."
+          }
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/refresh",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"eyJ...\"\n}"
+            },
+            "description": "Renueva el par de tokens con el refresh token."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/logout",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "logout"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"eyJ...\",\n  \"logoutAll\": false\n}"
+            },
+            "description": "Cierra la sesión. logoutAll=true revoca todas las sesiones."
+          }
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/password/change",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "password",
+                "change"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Greip#2026\",\n  \"newPassword\": \"Nueva#Pass2026\"\n}"
+            },
+            "description": "Cambia la contraseña (requiere sesión activa)."
+          }
+        },
+        {
+          "name": "Request password recovery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/password/recovery",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "password",
+                "recovery"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@greip.com.pe\",\n  \"channel\": \"EMAIL\"\n}"
+            },
+            "description": "Solicita un código OTP de 8 dígitos de recuperación de contraseña por email o SMS."
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/auth/password/reset",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "auth",
+                "password",
+                "reset"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@greip.com.pe\",\n  \"code\": \"48291370\",\n  \"newPassword\": \"Nueva#Pass2026\"\n}"
+            },
+            "description": "Reestablece la contraseña con el código OTP de 8 dígitos recibido."
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-security / User",
+      "item": [
+        {
+          "name": "Create user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo@greip.com.pe\",\n  \"documentType\": \"D\",\n  \"documentNumber\": \"12345678\",\n  \"firstName\": \"Juan\",\n  \"fatherLastName\": \"Perez\",\n  \"motherLastName\": \"Garcia\",\n  \"phone\": \"+51999888777\",\n  \"password\": \"Temporal#2026\"\n}"
+            },
+            "description": "Crea un usuario. Guarda `userId` en la variable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json().payload;",
+                  "if (body && body.data && body.data.user && body.data.user.userId) {",
+                  "  pm.collectionVariables.set('userId', body.data.user.userId);",
+                  "  console.log('userId guardado:', body.data.user.userId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user"
+              ]
+            },
+            "description": "Lista usuarios paginados con filtros (page, pageSize, status, email, document)."
+          }
+        },
+        {
+          "name": "Get user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}"
+              ]
+            },
+            "description": "Obtiene el detalle del usuario (perfil + persona + roles + permisos)."
+          }
+        },
+        {
+          "name": "Update user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Juan Carlos\",\n  \"phone\": \"+51999888777\",\n  \"status\": \"A\"\n}"
+            },
+            "description": "Actualiza datos del usuario."
+          }
+        },
+        {
+          "name": "Delete user",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}"
+              ]
+            },
+            "description": "Elimina usuario (borrado lógico, status=I)."
+          }
+        },
+        {
+          "name": "Assign roles",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}/roles",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}",
+                "roles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roles\": [\"{{roleId}}\"]\n}"
+            },
+            "description": "Asigna roles al usuario."
+          }
+        },
+        {
+          "name": "Remove role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}/roles/{{roleId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}",
+                "roles",
+                "{{roleId}}"
+              ]
+            },
+            "description": "Quita un rol del usuario."
+          }
+        },
+        {
+          "name": "Get user permissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/user/{{userId}}/permissions",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "user",
+                "{{userId}}",
+                "permissions"
+              ]
+            },
+            "description": "Obtiene los permisos efectivos del usuario."
+          }
+        },
+        {
+          "name": "List roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role"
+              ]
+            },
+            "description": "Lista los roles del tenant."
+          }
+        },
+        {
+          "name": "Create role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"GERENTE\",\n  \"name\": \"Gerente\",\n  \"description\": \"Rol de gerencia\"\n}"
+            },
+            "description": "Crea un rol. Guarda `roleId` en la variable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json().payload;",
+                  "if (body && body.data && body.data.id) {",
+                  "  pm.collectionVariables.set('roleId', String(body.data.id));",
+                  "  console.log('roleId guardado:', body.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "List permissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/permission",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "permission"
+              ]
+            },
+            "description": "Lista los permisos disponibles del tenant."
+          }
+        },
+        {
+          "name": "Get role",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Administrador\",\n  \"description\": \"Rol admin\",\n  \"status\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get role permissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1/permissions",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1",
+                "permissions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign role permissions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1/permissions",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1",
+                "permissions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\n    1,\n    2,\n    3\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Remove role permission",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/role/1/permissions/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "role",
+                "1",
+                "permissions",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/permission",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "permission"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"reports.read\",\n  \"name\": \"Leer reportes\",\n  \"description\": \"Consulta de reportes\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update permission",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/permission/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "permission",
+                "1"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Leer reportes\",\n  \"status\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete permission",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/permission/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "permission",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/tenant",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "tenant"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"NUEVO\",\n  \"name\": \"Nueva Empresa\",\n  \"status\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List tenants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/tenant",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "tenant"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update tenant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/tenant/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "tenant",
+                "1"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nueva Empresa S.A.C.\",\n  \"status\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Deactivate tenant",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/tenant/1",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "tenant",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dashboard summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/dashboard",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "dashboard"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-security / Audit",
+      "item": [
+        {
+          "name": "Get entity change log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/entity-audit?entity={{entity}}&entityKey={{entityKey}}&tenantId={{tenantId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "entity-audit"
+              ],
+              "query": [
+                {
+                  "key": "entity",
+                  "value": "product"
+                },
+                {
+                  "key": "entityKey",
+                  "value": "{{productId}}"
+                },
+                {
+                  "key": "tenantId",
+                  "value": "1"
+                },
+                {
+                  "key": "action",
+                  "value": "",
+                  "description": "Filtro por accion/evento (ej. PRODUCT_CREATED)"
+                },
+                {
+                  "key": "sourceIp",
+                  "value": "",
+                  "description": "Filtro por IP de origen"
+                },
+                {
+                  "key": "userAgent",
+                  "value": "",
+                  "description": "Filtro por user-agent"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get user movements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-security}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-security/entity-audit/user",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-security",
+                "entity-audit",
+                "user"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "",
+                  "description": "Filtro por accion/evento"
+                },
+                {
+                  "key": "entity",
+                  "value": "",
+                  "description": "Filtro por entidad"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-catalogs / Product",
+      "item": [
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-catalogs}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-catalogs/product",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-catalogs",
+                "product"
+              ]
+            },
+            "description": "Lista productos del tenant del token (filtros: page, pageSize, status, name)."
+          }
+        },
+        {
+          "name": "Get product",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-catalogs}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-catalogs/product/{{productId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-catalogs",
+                "product",
+                "{{productId}}"
+              ]
+            },
+            "description": "Obtiene un producto por id (solo si pertenece al tenant del token)."
+          }
+        },
+        {
+          "name": "Create product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-catalogs}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-catalogs/product",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-catalogs",
+                "product"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Consultoria TI\",\n  \"description\": \"Servicio de consultoria\",\n  \"price\": 1500.5,\n  \"currency\": \"PEN\",\n  \"status\": \"A\"\n}"
+            },
+            "description": "Crea un producto. El tenantId viene del token (no se envía). Guarda `productId`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json().payload;",
+                  "if (body && body.data && body.data.productId) {",
+                  "  pm.collectionVariables.set('productId', String(body.data.productId));",
+                  "  console.log('productId guardado:', body.data.productId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-catalogs}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-catalogs/product/{{productId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-catalogs",
+                "product",
+                "{{productId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Consultoria TI Plus\",\n  \"price\": 1800.0,\n  \"status\": \"A\"\n}"
+            },
+            "description": "Actualiza un producto."
+          }
+        },
+        {
+          "name": "Delete product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-catalogs}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-catalogs/product/{{productId}}",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-catalogs",
+                "product",
+                "{{productId}}"
+              ]
+            },
+            "description": "Elimina un producto."
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-cross / Notification",
+      "item": [
+        {
+          "name": "Send email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-cross}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-cross/cross/email",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-cross",
+                "cross",
+                "email"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": [\"destino@greip.com.pe\"],\n  \"subject\": \"Notificacion GREIP COMPANY\",\n  \"html\": \"<h1>Hola</h1>\"\n}"
+            },
+            "description": "Envía un correo vía SES. Requiere `to` (array) y al menos html o text."
+          }
+        },
+        {
+          "name": "Send SMS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-cross}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-cross/cross/sms",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-cross",
+                "cross",
+                "sms"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"+51999888777\",\n  \"message\": \"GREIP: tu codigo de verificacion es 123456\"\n}"
+            },
+            "description": "Envía un SMS vía SNS."
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-cross / Crypto",
+      "item": [
+        {
+          "name": "Encrypt token data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-cross}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-cross/cross/token/encrypt",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-cross",
+                "cross",
+                "token",
+                "encrypt"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"sub\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"tenant\": \"GREIP\",\n    \"roles\": [\"ADMIN\"]\n  }\n}"
+            },
+            "description": "Cifra la data que viaja dentro del token JWT (AES)."
+          }
+        },
+        {
+          "name": "Decrypt token data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-cross}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-cross/cross/token/decrypt",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-cross",
+                "cross",
+                "token",
+                "decrypt"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"encrypted\": \"<valor devuelto por /cross/token/encrypt>\"\n}"
+            },
+            "description": "Descifra la data del token JWT. Devuelve objeto JSON si el texto era un objeto."
+          }
+        }
+      ]
+    },
+    {
+      "name": "service-third-party",
+      "item": [
+        {
+          "name": "Get notification config",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-third-party}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-third-party/thyrd/config",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-third-party",
+                "thyrd",
+                "config"
+              ]
+            },
+            "description": "Obtiene la configuracion de proveedores de notificacion del tenant autenticado (credenciales enmascaradas).",
+            "body": {
+              "mode": "raw",
+              "raw": []
+            }
+          }
+        },
+        {
+          "name": "Set notification config",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-third-party}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "channel",
+                "value": "{{canal}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-third-party/thyrd/config",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-third-party",
+                "thyrd",
+                "config"
+              ]
+            },
+            "description": "Registra/actualiza las credenciales Brevo/Twilio y el proveedor activo por canal.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emailProvider\": \"BREVO\",\n  \"smsProvider\": \"BREVO\",\n  \"brevo\": {\n    \"enabled\": true,\n    \"apiKey\": \"xkeysib-<API_KEY>\",\n    \"fromEmail\": \"no-reply@greip.com.pe\",\n    \"fromName\": \"GREIP COMPANY\",\n    \"smsSender\": \"GREIP\"\n  },\n  \"twilio\": {\n    \"enabled\": false,\n    \"accountSid\": \"AC<SID>\",\n    \"authToken\": \"<TOKEN>\",\n    \"sendgridApiKey\": \"SG.<KEY>\",\n    \"fromPhone\": \"+51999888777\",\n    \"fromEmail\": \"no-reply@greip.com.pe\",\n    \"fromName\": \"GREIP COMPANY\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Brevo - Send email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-third-party}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-third-party/thyrd/brevo/notify/email",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-third-party",
+                "thyrd",
+                "brevo",
+                "notify",
+                "email"
+              ]
+            },
+            "description": "Envia un email via Brevo usando la apiKey configurada del tenant.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"to\": [\"destino@greip.com.pe\"], \"subject\": \"Notificacion GREIP\", \"html\": \"<h1>Hola</h1>\"}"
+            }
+          }
+        },
+        {
+          "name": "Brevo - Send SMS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-third-party}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-third-party/thyrd/brevo/notify/sms",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-third-party",
+                "thyrd",
+                "brevo",
+                "notify",
+                "sms"
+              ]
+            },
+            "description": "Envia un SMS via Brevo usando la apiKey configurada del tenant.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"phoneNumber\": \"+51999888777\", \"message\": \"GREIP: codigo 123456\"}"
+            }
+          }
+        },
+        {
+          "name": "Twilio - Send email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-third-party}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-third-party/thyrd/twilio/notify/email",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-third-party",
+                "thyrd",
+                "twilio",
+                "notify",
+                "email"
+              ]
+            },
+            "description": "Envia un email via Twilio SendGrid usando la apiKey configurada del tenant.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"to\": [\"destino@greip.com.pe\"], \"subject\": \"Notificacion GREIP\", \"html\": \"<h1>Hola</h1>\"}"
+            }
+          }
+        },
+        {
+          "name": "Twilio - Send SMS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{ak-service-third-party}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api-server}}/srv-third-party/thyrd/twilio/notify/sms",
+              "host": [
+                "{{api-server}}"
+              ],
+              "path": [
+                "srv-third-party",
+                "thyrd",
+                "twilio",
+                "notify",
+                "sms"
+              ]
+            },
+            "description": "Envia un SMS via Twilio usando las credenciales configuradas del tenant.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"phoneNumber\": \"+51999888777\", \"message\": \"GREIP: codigo 123456\"}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

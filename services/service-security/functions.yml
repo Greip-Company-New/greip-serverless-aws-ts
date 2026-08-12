@@ -1,0 +1,534 @@
+# =========================================================
+# service-security | GREIP COMPANY
+# Lambdas: AUTH_LMB (auth+password), USUARIO_LMB (user+rbac),
+#          AUDIT_LMB (consulta auditoria) y AUDIT_STREAM_LMB
+#          (procesador del DynamoDB Stream de USUARIOS).
+# =========================================================
+
+AUTH_LMB:
+    handler: dist/auth-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-AUTH
+    description: Lambda de autenticacion y gestion de contrasenas de GREIP COMPANY (login, MFA, refresh, logout)
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-postgresdb:${self:custom.config.lyPgNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/auth-lmb/**/*.js'
+        - 'dist/auth-lmb/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'
+    events:
+      - http:
+          path: /auth/login
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/login.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/mfa/verify
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/verificarMfa.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/mfa/switch
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/switchMfaChannel.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/refresh
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/refrescarToken.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/logout
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/logout.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/password/change
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/cambiarContrasena.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/password/recovery
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/solicitarRecuperacion.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/password/reset
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/reestablecerContrasena.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /auth/email/verify
+          method: get
+          integration: lambda
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/auth-lmb/verificarEmailGet.vm)}
+          response: ${file(config/serverless/response/verificarEmailRedirect.yml)}
+
+USUARIO_LMB:
+    handler: dist/usuario-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-USUARIO
+    description: Lambda de gestion de usuarios y RBAC (roles/permisos) de GREIP COMPANY
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-postgresdb:${self:custom.config.lyPgNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/usuario-lmb/**/*.js'
+        - 'dist/usuario-lmb/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'
+    events:
+      - http:
+          path: /user
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/crearUsuario.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/listarUsuarios.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/obtenerUsuario.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}
+          method: put
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/actualizarUsuario.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/eliminarUsuario.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/hard
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/eliminarUsuarioFisico.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/resend-verification
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/reenviarVerificacion.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/mfa/totp
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/registerTotp.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/mfa/totp/verify
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/verifyTotp.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/mfa/email
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/enableEmailMfa.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/mfa/email/verify
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/verifyEmailMfa.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/mfa/{channel}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/disableMfa.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/roles
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/asignarRoles.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/roles/{roleId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/quitarRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /user/{userId}/permissions
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/obtenerPermisos.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/listarRoles.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/crearRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/obtenerRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}
+          method: put
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/actualizarRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/eliminarRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}/permissions
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/obtenerPermisosRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}/permissions
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/asignarPermisosRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /role/{roleId}/permissions/{permissionId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/quitarPermisoRol.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /permission
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/listarPermisos.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /permission
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/crearPermiso.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /permission/{permissionId}
+          method: put
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/actualizarPermiso.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /permission/{permissionId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/eliminarPermiso.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /tenant
+          method: post
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/crearTenant.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /tenant
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/listarTenants.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /tenant/{tenantId}
+          method: put
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/actualizarTenant.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /tenant/{tenantId}
+          method: delete
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/eliminarTenant.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /pais
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/listarPaises.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /dashboard
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/usuario-lmb/resumenDashboard.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+
+# Utilidad de bootstrap: crea el rol ADMIN con todos los permisos y el usuario
+# administrador inicial. Sin evento HTTP; se invoca manualmente por CLI.
+BOOTSTRAP_LMB:
+    handler: dist/bootstrap/handler.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-BOOTSTRAP
+    description: Utilidad de bootstrap de usuarios y RBAC de GREIP COMPANY (invocacion manual)
+    timeout: 120
+    memorySize: 1024
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-postgresdb:${self:custom.config.lyPgNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/bootstrap/**/*.js'
+        - 'dist/bootstrap/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'
+
+
+# Microservicio de auditoria de entidades: persiste el historial de cambios
+# (crear/actualizar/eliminar) de cualquier entidad en greip.entity_change_log.
+# registerChange es invocado por Lambda-to-Lambda desde los servicios;
+# listChanges expone la consulta por entity + entityKey + tenantId via HTTP.
+ENTITY_AUDIT_LMB:
+    handler: dist/entity-audit-lmb/app.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-ENTITY-AUDIT
+    description: Microservicio de auditoria de cambios de entidades de GREIP COMPANY (historico generico en PostgreSQL)
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-postgresdb:${self:custom.config.lyPgNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/entity-audit-lmb/**/*.js'
+        - 'dist/entity-audit-lmb/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'
+    events:
+      - http:
+          path: /entity-audit
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/entity-audit-lmb/listChanges.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+      - http:
+          path: /entity-audit/user
+          method: get
+          integration: lambda
+          private: true
+          cors: ${file(config/serverless/http-cors.yml)}
+          request:
+            template:
+              application/json: ${file(config/serverless/request/src/entity-audit-lmb/listByUser.vm)}
+          response: ${file(config/serverless/http-response.yml)}
+
+# Procesador de la cola SQS de auditoria: persiste en PostgreSQL los mensajes
+# encolados por Helpers.registerEntityChange (entity_change_log).
+AUDIT_SYNC_LMB:
+    handler: dist/audit-sync-lmb/handler.handler
+    name: ${self:custom.config.lambdaPrefix.${self:custom.stageDeploy}}-AUDIT-SYNC
+    description: Procesador de la cola SQS de auditoria de GREIP COMPANY (persiste en PostgreSQL)
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-common:${self:custom.config.lyCommonNew.${self:custom.stageDeploy}}
+      - arn:aws:lambda:${self:provider.region}:${self:custom.config.idAwsAccount.${self:custom.stageDeploy}}:layer:ly-nodejs-ts-postgresdb:${self:custom.config.lyPgNew.${self:custom.stageDeploy}}
+    package:
+      patterns:
+        - 'dist/audit-sync-lmb/**/*.js'
+        - 'dist/audit-sync-lmb/**/*.ts'
+        - 'dist/common/**/*.js'
+        - 'dist/common/**/*.ts'
+    events:
+      - sqs:
+          arn: ${self:custom.config.sqsAuditArn.${self:custom.stageDeploy}}
+          batchSize: 10
+          maximumBatchingWindowInSeconds: 5

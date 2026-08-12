@@ -1,0 +1,4 @@
+# La validacion ya fue marcada en DDB por el service (verifyEmail auto).
+# Redirect estatico al login (Location se inyecta por config desde verificarEmailRedirect.yml).
+#set($context.responseOverride.status = 302)
+#set($context.responseOverride.header.Cache-Control = "no-store")

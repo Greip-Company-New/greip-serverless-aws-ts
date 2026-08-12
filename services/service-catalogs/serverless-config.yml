@@ -1,0 +1,52 @@
+# Configuracion por stage de service-catalogs (GREIP COMPANY)
+# QA/PROD: completar los valores PENDIENTE al desplegar esos entornos.
+
+regions:
+    code:
+      DEV: us-east-2
+      QA: us-east-2
+      PROD: us-east-2
+domains:
+    DEV: 'apidev.greip.com.pe'
+    QA: 'apiqa.greip.com.pe'
+    PROD: 'api.greip.com.pe'
+idAwsAccount:
+    DEV: '918897411288'
+    QA: '918897411288'
+    PROD: '918897411288'
+vpcSecurityGroupId:
+    DEV: sg-0f147bc5e449a259d
+    QA: PENDIENTE
+    PROD: PENDIENTE
+vpcSubnetId1:
+    DEV: subnet-0d818db94727340a0
+    QA: PENDIENTE
+    PROD: PENDIENTE
+vpcSubnetId2:
+    DEV: subnet-0d818db94727340a0
+    QA: PENDIENTE
+    PROD: PENDIENTE
+bucketDeploy:
+    DEV: bk-greip-dev
+    QA: bk-greip-qa
+    PROD: bk-greip-prod
+secretDataBase:
+    DEV: 'Greip/postgres/dev'
+    QA: 'Greip/postgres/qa'
+    PROD: 'Greip/postgres/prod'
+lambdaPrefix:
+    DEV: SRV-CATALOGS-LMB
+    QA: SRV-CATALOGS-LMB
+    PROD: SRV-CATALOGS-LMB
+profile:
+    DEV: 'devGreipCompany'
+    QA: 'qaGreipCompany'
+    PROD: 'prodGreipCompany'
+lyCommonNew:
+    DEV: 8
+    QA: 8
+    PROD: 8
+lyPgNew:
+    DEV: 1
+    QA: 1
+    PROD: 1

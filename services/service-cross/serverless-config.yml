@@ -1,0 +1,48 @@
+# Configuracion por stage de service-cross (GREIP COMPANY)
+# QA/PROD: completar los valores PENDIENTE al desplegar esos entornos.
+
+regions:
+    code:
+      DEV: us-east-2
+      QA: us-east-2
+      PROD: us-east-2
+domains:
+    DEV: 'apidev.greip.com.pe'
+    QA: 'apiqa.greip.com.pe'
+    PROD: 'api.greip.com.pe'
+idAwsAccount:
+    DEV: '918897411288'
+    QA: '918897411288'
+    PROD: '918897411288'
+vpcSecurityGroupId:
+    DEV: sg-0f147bc5e449a259d
+    QA: PENDIENTE
+    PROD: PENDIENTE
+vpcSubnetId1:
+    DEV: subnet-0d818db94727340a0
+    QA: PENDIENTE
+    PROD: PENDIENTE
+vpcSubnetId2:
+    DEV: subnet-0d818db94727340a0
+    QA: PENDIENTE
+    PROD: PENDIENTE
+bucketDeploy:
+    DEV: bk-greip-dev
+    QA: bk-greip-qa
+    PROD: bk-greip-prod
+lambdaPrefix:
+    DEV: SRV-CROSS-LMB
+    QA: SRV-CROSS-LMB
+    PROD: SRV-CROSS-LMB
+lmbShortlink:
+    DEV: 'SRV-THYRD-LMB-SHORTLINK'
+    QA: 'SRV-THYRD-LMB-SHORTLINK'
+    PROD: 'SRV-THYRD-LMB-SHORTLINK'
+profile:
+    DEV: 'devGreipCompany'
+    QA: 'qaGreipCompany'
+    PROD: 'prodGreipCompany'
+lyCommonNew:
+    DEV: 9
+    QA: 9
+    PROD: 9

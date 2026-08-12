@@ -1,0 +1,323 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Almacenamiento de GREIP COMPANY: tablas DynamoDB y bucket S3 de aplicacion'
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - DEV
+      - QA
+      - PROD
+    Default: DEV
+  BucketSuffix:
+    Type: String
+    Description: Sufijo en minusculas para el bucket (dev|qa|prod).
+    AllowedValues:
+      - dev
+      - qa
+      - prod
+    Default: dev
+
+Resources:
+  # ---------- DynamoDB ----------
+
+  UsuariosTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'TBL_GREIP_USUARIOS_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: documentKey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      # GSI de login: busqueda de usuario por email
+      GlobalSecondaryIndexes:
+        - IndexName: IdxUserEmail
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+            - AttributeName: sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        # GSI de login: busqueda de usuario por numero de documento
+        - IndexName: IdxUserDocument
+          KeySchema:
+            - AttributeName: documentKey
+              KeyType: HASH
+            - AttributeName: sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      # Stream para auditar cambios de usuarios (diff old -> new)
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  ArchivosTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'TBL_GREIP_ARCHIVOS_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  # Sesiones de autenticacion: pk=tenant#userId, sk=refreshToken, TTL de la sesion
+  SeguridadSesionesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'TBL_GREIP_SEGURIDAD_SESIONES_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  # Auditoria de eventos de seguridad: pk=tenant, sk=timestamp#eventId
+  SeguridadAuditoriaTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'TBL_GREIP_SEGURIDAD_AUDITORIA_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  # Desafios/factores MFA: pk=tenant#userId, sk=canal (TOTP|SMS|EMAIL)
+  SeguridadMfaTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'TBL_GREIP_SEGURIDAD_MFA_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  # Configuracion de proveedores de notificacion por tenant: pk=tenant, sk=CONFIG
+  TercerosConfigTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'TBL_GREIP_TERCEROS_CONFIG_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  # ---------- SQS (auditoria asincrona) ----------
+
+  # Dead Letter Queue: mensajes que fallan despues de maxReceiveCount van aqui.
+  AuditoriaDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub 'greip-audit-dlq-${BucketSuffix}'
+      MessageRetentionPeriod: 1209600   # 14 dias
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  # Cola de auditoria: las Lambdas encolan los eventos de auditoria aqui y una
+  # Lambda procesadora (AUDIT_SYNC_LMB) los persiste en PostgreSQL.
+  AuditoriaQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub 'greip-audit-${BucketSuffix}'
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 345600   # 4 dias (el consumidor lo borra al procesar)
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AuditoriaDlq.Arn
+        maxReceiveCount: 5
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+  # ---------- S3 ----------
+
+  AppBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'bk-greip-${BucketSuffix}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            ExposedHeaders:
+              - ETag
+            MaxAge: 3000
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: GreipBackupsRetention
+            Status: Enabled
+            Prefix: backups/
+            ExpirationInDays: 7
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 7
+      Tags:
+        - Key: OWNER
+          Value: GREIP-COMPANY
+        - Key: STAGE
+          Value: !Ref Environment
+
+Outputs:
+  UsuariosTableName:
+    Value: !Ref UsuariosTable
+    Export:
+      Name: !Sub 'greip-tabla-usuarios-${Environment}'
+  ArchivosTableName:
+    Value: !Ref ArchivosTable
+    Export:
+      Name: !Sub 'greip-tabla-archivos-${Environment}'
+  SeguridadSesionesTableName:
+    Value: !Ref SeguridadSesionesTable
+    Export:
+      Name: !Sub 'greip-tabla-seguridad-sesiones-${Environment}'
+  SeguridadAuditoriaTableName:
+    Value: !Ref SeguridadAuditoriaTable
+    Export:
+      Name: !Sub 'greip-tabla-seguridad-auditoria-${Environment}'
+  SeguridadMfaTableName:
+    Value: !Ref SeguridadMfaTable
+    Export:
+      Name: !Sub 'greip-tabla-seguridad-mfa-${Environment}'
+  TercerosConfigTableName:
+    Value: !Ref TercerosConfigTable
+    Export:
+      Name: !Sub 'greip-tabla-terceros-config-${Environment}'
+  AuditoriaQueueName:
+    Value: !Ref AuditoriaQueue
+    Export:
+      Name: !Sub 'greip-cola-auditoria-${Environment}'
+  AuditoriaQueueUrl:
+    Value: !Ref AuditoriaQueue
+    Export:
+      Name: !Sub 'greip-cola-auditoria-url-${Environment}'
+  AuditoriaQueueArn:
+    Value: !GetAtt AuditoriaQueue.Arn
+    Export:
+      Name: !Sub 'greip-cola-auditoria-arn-${Environment}'
+  AuditoriaDlqName:
+    Value: !Ref AuditoriaDlq
+    Export:
+      Name: !Sub 'greip-cola-auditoria-dlq-${Environment}'
+  AppBucketName:
+    Value: !Ref AppBucket
+    Export:
+      Name: !Sub 'greip-bucket-app-${Environment}'

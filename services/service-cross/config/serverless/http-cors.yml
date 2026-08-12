@@ -1,0 +1,16 @@
+origin: '*'
+headers:
+  - Content-Type
+  - X-Amz-Date
+  - Authorization
+  - X-Api-Key
+  - X-Amz-Security-Token
+  - X-Amz-User-Agent
+  - Access-Control-Allow-Origin
+  - Access-Control-Allow-Credentials
+  - User
+  - channel
+  - Canal
+  - User-Token
+  - User-Identity
+allowCredentials: false

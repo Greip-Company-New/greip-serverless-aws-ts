@@ -1,0 +1,24 @@
+# package directories
+node_modules
+jspm_packages
+coverage
+tests
+
+# Serverless directories
+.serverless
+
+/.idea/*
+
+dist
+
+legacy
+
+.build
+
+package-lock.json
+*.lock
+.DS_Store
+*.log
+nodejs/
+layer.zip
+.env

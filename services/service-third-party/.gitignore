@@ -1,0 +1,21 @@
+# dependencies
+node_modules
+
+# build
+dist
+
+# serverless
+.serverless
+
+# tests
+coverage
+
+# lockfiles (convencion del monorepo)
+package-lock.json
+*.lock
+
+.DS_Store
+*.log
+
+# compilacion incremental (tsc)
+*.tsbuildinfo
